@@ -73,7 +73,7 @@ export const STATIC_INFO: Record<string, { title: string; content: string }> = {
   },
   "Inventory": { 
     title: "Inventory", 
-    content: "Your equipment list. Daggerheart inventory is generally narrative-first.\n\n• You can carry a reasonable amount of gear.\n• Potions and consumables should be tracked carefully.\n• Weapons and Armor usually have their own dedicated slots." 
+    content: "Inventory management in Daggerheart focuses on loadout and utility.\n\n• **Items**: Standard gear.\n• **Gold**: Tracked in Handfuls (10g), Bags (100g), and Chests (1000g)." 
   }
 };
 
@@ -103,6 +103,32 @@ export const EXAMPLE_EXPERIENCES = {
     "Raised by Wolves", "Cursed by a Witch", "Sole Survivor", "Dragon Slayer", "Wanted Fugitive", "Haunted"
   ]
 };
+
+export const CLASS_DOMAINS: Record<string, string[]> = {
+    "Bard": ["Grace", "Codex"],
+    "Druid": ["Sage", "Arcana"],
+    "Guardian": ["Valor", "Blade"],
+    "Ranger": ["Bone", "Sage"],
+    "Rogue": ["Midnight", "Grace"],
+    "Seraph": ["Splendor", "Valor"],
+    "Sorcerer": ["Arcana", "Midnight"],
+    "Warrior": ["Blade", "Bone"],
+    "Wizard": ["Codex", "Splendor"]
+};
+
+export const SAMPLE_ABILITIES = [
+    { name: "Battlefield Commander", domain: "Blade", level: 1, cost: "1 Hope", description: "Mark an enemy. Allies gain advantage when attacking that enemy until the start of your next turn." },
+    { name: "Whirlwind", domain: "Bone", level: 1, cost: "2 Stress", description: "Attack all enemies within melee range. Mark 1 stress for each enemy targeted beyond the first." },
+    { name: "Arcane Barrage", domain: "Arcana", level: 1, cost: "1 Hope", description: "Fire three missiles of magical energy. Each deals d6 damage." },
+    { name: "Healing Word", domain: "Grace", level: 1, cost: "1 Hope", description: "Heal an ally within Far range for 1d8 HP." },
+    { name: "Shadow Step", domain: "Midnight", level: 1, cost: "1 Stress", description: "Teleport to a location within Close range that is in shadow." },
+    { name: "Rallying Cry", domain: "Valor", level: 1, cost: "2 Hope", description: "All allies within Close range clear 2 Stress." },
+    { name: "Nature's Grasp", domain: "Sage", level: 1, cost: "1 Hope", description: "Vines erupt from the ground, restraining a target within Far range." },
+    { name: "Divine Shield", domain: "Splendor", level: 1, cost: "1 Stress", description: "Grant an ally +2 Armor until the start of your next turn." },
+    { name: "Loremaster", domain: "Codex", level: 1, cost: "Passive", description: "Gain +2 to all Knowledge rolls related to history or magic." }
+];
+
+export const WEAPON_RANGES = ["Melee", "Very Close", "Close", "Far", "Very Far"];
 
 export const DAGGERHEART_RULES = {
   classes: [
@@ -229,4 +255,37 @@ export const INITIAL_CHARACTER: CharacterProfile = {
     "Torch x3",
     "Travel Rations"
   ]
+};
+
+export const BLANK_CHARACTER: CharacterProfile = {
+  name: "New Hero",
+  class: "Warrior",
+  subclass: "Slayer",
+  level: 1,
+  ancestry: "Human",
+  community: "Wildborne",
+  traits: [
+    { name: TraitType.Agility, value: 0, description: "Sprint, Leap, Maneuver" },
+    { name: TraitType.Strength, value: 0, description: "Lift, Smash, Grapple" },
+    { name: TraitType.Finesse, value: 0, description: "Notice, Aim, Hide" },
+    { name: TraitType.Instinct, value: 0, description: "Sense, React, Navigate" },
+    { name: TraitType.Presence, value: 0, description: "Charm, Perform, Command" },
+    { name: TraitType.Knowledge, value: 0, description: "Recall, Analyze, Heal" },
+  ],
+  evasion: 10,
+  armor: 0,
+  maxArmor: 3,
+  hp: 0,
+  minorThreshold: 5,
+  majorThreshold: 10,
+  severeThreshold: 15,
+  stress: 0,
+  maxStress: 5,
+  hope: 0,
+  maxHope: 2,
+  gold: 0,
+  weapons: [],
+  abilities: [],
+  experiences: [],
+  inventory: []
 };
