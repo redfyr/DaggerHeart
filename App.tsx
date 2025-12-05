@@ -5,6 +5,9 @@ import { CharacterProfile, TraitType, RollResult, Weapon, AbilityCard, Experienc
 import { getRulesInsight, getNarrativeFlavor, subscribeToUsage } from './services/geminiService';
 import { saveCharacterToDB, getAllCharacters, deleteCharacterFromDB } from './services/db';
 
+// --- Constants ---
+const MAX_HP = 6; // Daggerheart standard HP slots
+
 // --- Icons (SVG) ---
 const InfoIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block opacity-50 hover:opacity-100 transition-opacity cursor-help"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
@@ -368,48 +371,76 @@ export default function App() {
           
           {/* Vitals Row */}
           <div className="grid grid-cols-3 gap-4">
-            {/* HP */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden">
+            {/* HP / Damage */}
+            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
               <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50"></div>
               <div className="flex justify-center items-center gap-1 mb-1">
                  <h3 className="text-sm uppercase tracking-wider text-slate-400">Damage</h3>
                  <button onClick={() => handleStaticInfo("Damage")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
               </div>
-              <div className="text-2xl font-bold text-white">{character.hp}</div>
-              <div className="flex justify-center gap-1 mt-2">
-                <button onClick={() => setCharacter(c => ({...c, hp: Math.max(0, c.hp - 1)}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">-</button>
-                <button onClick={() => setCharacter(c => ({...c, hp: c.hp + 1}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">+</button>
+              
+              <div className="text-3xl font-bold text-white mb-2">{character.hp}</div>
+              
+              <div className="flex flex-wrap justify-center gap-1.5 mb-2 px-1">
+                  {Array.from({length: MAX_HP}).map((_, i) => (
+                    <button 
+                        key={i}
+                        onClick={() => setCharacter(c => ({...c, hp: i + 1 === c.hp ? i : i + 1}))}
+                        className={`w-5 h-5 rounded-full border border-red-500 transition-all ${
+                            i < character.hp ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-transparent opacity-30'
+                        }`}
+                    />
+                  ))}
               </div>
-              <div className="text-[10px] text-slate-500 mt-2">
-                Min: {character.minorThreshold} | Maj: {character.majorThreshold} | Sev: {character.severeThreshold}
+
+              <div className="text-[10px] text-slate-500 mt-auto w-full leading-tight">
+                Min: {character.minorThreshold} | Maj: {character.majorThreshold}
               </div>
             </div>
 
             {/* Armor */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden">
+            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
               <div className="absolute top-0 left-0 w-full h-1 bg-slate-400/50"></div>
               <div className="flex justify-center items-center gap-1 mb-1">
                  <h3 className="text-sm uppercase tracking-wider text-slate-400">Armor</h3>
                  <button onClick={() => handleStaticInfo("Armor")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
               </div>
-              <div className="text-2xl font-bold text-white">{character.armor} / {character.maxArmor}</div>
-              <div className="flex justify-center gap-1 mt-2">
-                <button onClick={() => setCharacter(c => ({...c, armor: Math.max(0, c.armor - 1)}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">-</button>
-                <button onClick={() => setCharacter(c => ({...c, armor: Math.min(c.maxArmor, c.armor + 1)}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">+</button>
+              
+              <div className="text-3xl font-bold text-white mb-2">{character.armor}</div>
+
+              <div className="flex flex-wrap justify-center gap-1.5 mb-4 px-1">
+                  {Array.from({length: character.maxArmor}).map((_, i) => (
+                    <button 
+                        key={i}
+                        onClick={() => setCharacter(c => ({...c, armor: i + 1 === c.armor ? i : i + 1}))}
+                        className={`w-5 h-5 rounded-full border border-slate-400 transition-all ${
+                            i < character.armor ? 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.6)]' : 'bg-transparent opacity-30'
+                        }`}
+                    />
+                  ))}
               </div>
             </div>
 
             {/* Stress */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden">
+            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
               <div className="absolute top-0 left-0 w-full h-1 bg-purple-500/50"></div>
               <div className="flex justify-center items-center gap-1 mb-1">
                  <h3 className="text-sm uppercase tracking-wider text-slate-400">Stress</h3>
                  <button onClick={() => handleStaticInfo("Stress")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
               </div>
-              <div className="text-2xl font-bold text-white">{character.stress} / {character.maxStress}</div>
-              <div className="flex justify-center gap-1 mt-2">
-                <button onClick={() => setCharacter(c => ({...c, stress: Math.max(0, c.stress - 1)}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">-</button>
-                <button onClick={() => setCharacter(c => ({...c, stress: Math.min(c.maxStress, c.stress + 1)}))} className="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700">+</button>
+              
+              <div className="text-3xl font-bold text-white mb-2">{character.stress}</div>
+
+              <div className="flex flex-wrap justify-center gap-1.5 mb-4 px-1">
+                  {Array.from({length: character.maxStress}).map((_, i) => (
+                    <button 
+                        key={i}
+                        onClick={() => setCharacter(c => ({...c, stress: i + 1 === c.stress ? i : i + 1}))}
+                        className={`w-5 h-5 rounded-full border border-purple-500 transition-all ${
+                            i < character.stress ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-transparent opacity-30'
+                        }`}
+                    />
+                  ))}
               </div>
             </div>
             
