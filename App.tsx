@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { INITIAL_CHARACTER, DAGGERHEART_RULES, STATIC_INFO, COMMON_ITEMS, EXAMPLE_EXPERIENCES } from './constants';
+import { INITIAL_CHARACTER, BLANK_CHARACTER, DAGGERHEART_RULES, STATIC_INFO, COMMON_ITEMS, EXAMPLE_EXPERIENCES, CLASS_DOMAINS, SAMPLE_ABILITIES, WEAPON_RANGES } from './constants';
 import { CharacterProfile, TraitType, RollResult, Weapon, AbilityCard, Experience } from './types';
 import { getRulesInsight, getNarrativeFlavor, subscribeToUsage } from './services/geminiService';
 import { saveCharacterToDB, getAllCharacters, deleteCharacterFromDB } from './services/db';
@@ -21,8 +21,8 @@ const FolderIcon = () => ( // Folder Icon for Load
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
 );
 
-const SaveIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+const CheckIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
 );
 
 const TrashIcon = () => (
@@ -31,6 +31,10 @@ const TrashIcon = () => (
 
 const PlusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+);
+
+const FilePlusIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
 );
 
 const CloseIcon = () => (
@@ -137,6 +141,65 @@ const MarkdownText = ({ content }: { content: string }) => {
   );
 };
 
+// --- Draggable Value Component for Gold ---
+function DraggableValue({ 
+    value, 
+    onChange, 
+    label 
+}: { 
+    value: number, 
+    onChange: (val: number) => void, 
+    label: string 
+}) {
+    const [isDragging, setIsDragging] = useState(false);
+    const startY = useRef(0);
+    const startVal = useRef(0);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        startY.current = e.clientY;
+        startVal.current = value;
+        document.body.style.cursor = 'ns-resize';
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        const delta = startY.current - e.clientY;
+        const steps = Math.floor(delta / 10); // 10px per step
+        const newVal = Math.max(0, startVal.current + steps);
+        onChange(newVal);
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        document.body.style.cursor = 'default';
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    return (
+        <div className="flex flex-col items-center">
+            <label className="text-[10px] text-slate-500 uppercase font-bold mb-1 tracking-wider">{label}</label>
+            <div className="flex items-center gap-2 bg-slate-900 rounded-lg p-1 border border-slate-700">
+                <button onClick={() => onChange(Math.max(0, value - 1))} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded">
+                    -
+                </button>
+                <div 
+                    className="w-12 text-center font-bold text-xl text-dagger-gold cursor-ns-resize select-none"
+                    onMouseDown={handleMouseDown}
+                >
+                    {value}
+                </div>
+                <button onClick={() => onChange(value + 1)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded">
+                    +
+                </button>
+            </div>
+        </div>
+    );
+}
+
+
 export default function App() {
   const [character, setCharacter] = useState<CharacterProfile>(INITIAL_CHARACTER);
   const [rollResult, setRollResult] = useState<RollResult | null>(null);
@@ -145,12 +208,23 @@ export default function App() {
   const [loadingFlavor, setLoadingFlavor] = useState(false);
   
   // Modals state
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PROFILE' | 'WEAPON' | 'ABILITY' | 'CHAR_SELECT' | 'INFO_MODAL' | 'EXPERIENCE' | 'INVENTORY'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PROFILE' | 'WEAPON' | 'ABILITY' | 'CHAR_SELECT' | 'INFO_MODAL' | 'EXPERIENCE' | 'INVENTORY' | 'GOLD'>('NONE');
   const [infoModalData, setInfoModalData] = useState({ topic: '', content: '', loading: false });
   const [savedCharacters, setSavedCharacters] = useState<CharacterProfile[]>([]);
+  
+  // Delete Modal State
+  const [deleteModal, setDeleteModal] = useState<{
+      isOpen: boolean;
+      title: string;
+      message: string;
+      onConfirm: () => void;
+  } | null>(null);
 
   // Usage Stats
   const [usageStats, setUsageStats] = useState({ calls: 0, tokens: 0 });
+
+  // Auto-Save State
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   useEffect(() => {
     const unsubscribe = subscribeToUsage((stats) => {
@@ -158,6 +232,28 @@ export default function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  // --- Auto-Save Effect ---
+  useEffect(() => {
+    setSaveStatus('saving');
+    const timer = setTimeout(async () => {
+      try {
+        const id = await saveCharacterToDB(character);
+        setSaveStatus('saved');
+        
+        // Critical: Update state ID if it was missing to prevent duplicate records on subsequent saves
+        // checking if character.id is different to avoid infinite loops if it was just assigned
+        if (!character.id) {
+            setCharacter(prev => ({ ...prev, id }));
+        }
+      } catch (e) {
+        console.error("Auto-save failed", e);
+        setSaveStatus('idle'); // or error indicator
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timer);
+  }, [character]);
 
   // --- Handlers ---
 
@@ -209,17 +305,11 @@ export default function App() {
     setActiveModal('CHAR_SELECT');
   };
 
-  const handleSave = async () => {
-    await saveCharacterToDB(character);
-    alert("Character Saved!");
-  };
-
-  const handleDeleteSavedChar = async (id: string) => {
-    if (confirm("Are you sure you want to delete this character?")) {
-      await deleteCharacterFromDB(id);
-      const chars = await getAllCharacters();
-      setSavedCharacters(chars);
-    }
+  const handleNewCharacter = () => {
+      // Create a fresh character by copying the blank template.
+      // Important: Ensure ID is undefined so the auto-save creates a new DB entry.
+      setCharacter({ ...BLANK_CHARACTER });
+      setActiveModal('NONE');
   };
 
   // --- Editing Handlers ---
@@ -234,35 +324,14 @@ export default function App() {
     setActiveModal('NONE');
   };
 
-  const handleDeleteWeapon = (id: string) => {
-    if(confirm("Delete this weapon?")) {
-        setCharacter(prev => ({ ...prev, weapons: prev.weapons.filter(w => w.id !== id) }));
-    }
-  };
-
   const handleAddAbility = (ability: AbilityCard) => {
     setCharacter(prev => ({ ...prev, abilities: [...prev.abilities, ability] }));
     setActiveModal('NONE');
   };
 
-  const handleDeleteAbility = (id: string) => {
-    if(confirm("Delete this ability?")) {
-        setCharacter(prev => ({ ...prev, abilities: prev.abilities.filter(a => a.id !== id) }));
-    }
-  };
-
   const handleAddExperience = (exp: Experience) => {
     setCharacter(prev => ({ ...prev, experiences: [...prev.experiences, exp] }));
     setActiveModal('NONE');
-  };
-
-  const handleDeleteExperience = (index: number) => {
-     if(confirm("Forget this experience?")) {
-        setCharacter(prev => ({
-            ...prev,
-            experiences: prev.experiences.filter((_, i) => i !== index)
-        }));
-     }
   };
 
   const handleAddInventory = (item: string) => {
@@ -272,8 +341,75 @@ export default function App() {
     setActiveModal('NONE');
   };
 
-  const handleDeleteInventory = (index: number) => {
-    setCharacter(prev => ({ ...prev, inventory: prev.inventory.filter((_, i) => i !== index) }));
+  const handleUpdateGold = (newGold: number) => {
+      setCharacter(prev => ({ ...prev, gold: newGold }));
+  };
+
+  // --- Deletion Request Handlers (Popups) ---
+
+  const requestDeleteWeapon = (id: string) => {
+    setDeleteModal({
+        isOpen: true,
+        title: "Delete Weapon",
+        message: "Are you sure you want to remove this weapon? This action cannot be undone.",
+        onConfirm: () => {
+            setCharacter(prev => ({ ...prev, weapons: prev.weapons.filter(w => w.id !== id) }));
+            setDeleteModal(null);
+        }
+    });
+  };
+
+  const requestDeleteAbility = (id: string) => {
+    setDeleteModal({
+        isOpen: true,
+        title: "Delete Ability",
+        message: "Are you sure you want to remove this ability? This action cannot be undone.",
+        onConfirm: () => {
+            setCharacter(prev => ({ ...prev, abilities: prev.abilities.filter(a => a.id !== id) }));
+            setDeleteModal(null);
+        }
+    });
+  };
+
+  const requestDeleteExperience = (index: number) => {
+    setDeleteModal({
+        isOpen: true,
+        title: "Forget Experience",
+        message: "Are you sure you want to remove this experience tag?",
+        onConfirm: () => {
+            setCharacter(prev => ({
+                ...prev,
+                experiences: prev.experiences.filter((_, i) => i !== index)
+            }));
+            setDeleteModal(null);
+        }
+    });
+  };
+
+  const requestDeleteInventory = (index: number) => {
+      setDeleteModal({
+        isOpen: true,
+        title: "Remove Item",
+        message: "Are you sure you want to remove this item from your inventory?",
+        onConfirm: () => {
+             setCharacter(prev => ({ ...prev, inventory: prev.inventory.filter((_, i) => i !== index) }));
+             setDeleteModal(null);
+        }
+      });
+  };
+
+  const requestDeleteSavedChar = (id: string) => {
+      setDeleteModal({
+          isOpen: true,
+          title: "Delete Character",
+          message: "Are you sure you want to permanently delete this saved character? This cannot be undone.",
+          onConfirm: async () => {
+            await deleteCharacterFromDB(id);
+            const chars = await getAllCharacters();
+            setSavedCharacters(chars);
+            setDeleteModal(null);
+          }
+      });
   };
 
   // --- Helpers ---
@@ -290,7 +426,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-dagger-dark text-slate-200 p-4 md:p-8 font-sans relative selection:bg-dagger-fear selection:text-white pb-16">
+    <div className="min-h-screen bg-dagger-dark text-slate-200 p-4 md:p-8 font-sans relative selection:bg-dagger-fear selection:text-white pb-24">
       
       {/* --- HEADER --- */}
       <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700 pb-4">
@@ -311,15 +447,17 @@ export default function App() {
             </p>
             </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setActiveModal('PROFILE')} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all text-white">
-            <EditIcon /> <span className="hidden sm:inline">Edit</span>
+        <div className="flex gap-2 items-center">
+          <button onClick={handleNewCharacter} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-all">
+            <FilePlusIcon /> <span className="hidden sm:inline">New</span>
           </button>
-          <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-all">
-            <SaveIcon /> <span className="hidden sm:inline">Save</span>
-          </button>
+
           <button onClick={loadCharacters} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-all">
             <FolderIcon /> <span className="hidden sm:inline">Load</span>
+          </button>
+          
+          <button onClick={() => setActiveModal('PROFILE')} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all text-white">
+            <EditIcon /> <span className="hidden sm:inline">Edit</span>
           </button>
         </div>
       </header>
@@ -369,19 +507,43 @@ export default function App() {
         {/* CENTER COLUMN: VITALS & COMBAT (6 cols) */}
         <div className="md:col-span-6 space-y-6">
           
-          {/* Vitals Row */}
-          <div className="grid grid-cols-3 gap-4">
-            {/* HP / Damage */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
+          {/* Vitals Row - Redesigned Grid */}
+          <div className="grid grid-cols-2 gap-4">
+             {/* Damage - Top Left */}
+            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center h-44">
               <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50"></div>
-              <div className="flex justify-center items-center gap-1 mb-1">
+              
+              {/* Header */}
+              <div className="flex justify-center items-center gap-1 mb-1 mt-1">
                  <h3 className="text-sm uppercase tracking-wider text-slate-400">Damage</h3>
                  <button onClick={() => handleStaticInfo("Damage")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
               </div>
+
+              {/* Thresholds Display */}
+              <div className="flex gap-2 justify-center w-full mb-1">
+                 <div className="flex flex-col items-center">
+                    <span className="text-[9px] text-slate-500 uppercase font-bold">Min</span>
+                    <span className="text-xs text-slate-300 leading-none">{character.minorThreshold}</span>
+                 </div>
+                 <div className="w-px bg-slate-700 h-6"></div>
+                 <div className="flex flex-col items-center">
+                    <span className="text-[9px] text-slate-500 uppercase font-bold">Maj</span>
+                    <span className="text-xs text-slate-300 leading-none">{character.majorThreshold}</span>
+                 </div>
+                 <div className="w-px bg-slate-700 h-6"></div>
+                 <div className="flex flex-col items-center">
+                    <span className="text-[9px] text-slate-500 uppercase font-bold">Sev</span>
+                    <span className="text-xs text-slate-300 leading-none">{character.severeThreshold}</span>
+                 </div>
+              </div>
               
-              <div className="text-3xl font-bold text-white mb-2">{character.hp}</div>
+              {/* Main Number */}
+              <div className="flex-grow flex items-center justify-center">
+                <div className="text-4xl font-bold text-white drop-shadow-md">{character.hp}</div>
+              </div>
               
-              <div className="flex flex-wrap justify-center gap-1.5 mb-2 px-1">
+              {/* Interactive Circles */}
+              <div className="flex flex-wrap justify-center gap-1.5 mb-1 mt-auto">
                   {Array.from({length: MAX_HP}).map((_, i) => (
                     <button 
                         key={i}
@@ -392,23 +554,28 @@ export default function App() {
                     />
                   ))}
               </div>
-
-              <div className="text-[10px] text-slate-500 mt-auto w-full leading-tight">
-                Min: {character.minorThreshold} | Maj: {character.majorThreshold}
-              </div>
             </div>
 
-            {/* Armor */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
+            {/* Armor - Top Right */}
+            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center h-44">
               <div className="absolute top-0 left-0 w-full h-1 bg-slate-400/50"></div>
-              <div className="flex justify-center items-center gap-1 mb-1">
+              
+              {/* Header */}
+              <div className="flex justify-center items-center gap-1 mb-1 mt-1">
                  <h3 className="text-sm uppercase tracking-wider text-slate-400">Armor</h3>
                  <button onClick={() => handleStaticInfo("Armor")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
               </div>
-              
-              <div className="text-3xl font-bold text-white mb-2">{character.armor}</div>
 
-              <div className="flex flex-wrap justify-center gap-1.5 mb-4 px-1">
+               {/* Spacer to match Damage Thresholds height */}
+               <div className="h-[26px] mb-1"></div>
+              
+              {/* Main Number */}
+              <div className="flex-grow flex items-center justify-center">
+                 <div className="text-4xl font-bold text-white drop-shadow-md">{character.armor}</div>
+              </div>
+
+              {/* Interactive Circles */}
+              <div className="flex flex-wrap justify-center gap-1.5 mb-1 mt-auto">
                   {Array.from({length: character.maxArmor}).map((_, i) => (
                     <button 
                         key={i}
@@ -421,31 +588,29 @@ export default function App() {
               </div>
             </div>
 
-            {/* Stress */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center justify-between min-h-[140px]">
-              <div className="absolute top-0 left-0 w-full h-1 bg-purple-500/50"></div>
-              <div className="flex justify-center items-center gap-1 mb-1">
-                 <h3 className="text-sm uppercase tracking-wider text-slate-400">Stress</h3>
-                 <button onClick={() => handleStaticInfo("Stress")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-              </div>
-              
-              <div className="text-3xl font-bold text-white mb-2">{character.stress}</div>
-
-              <div className="flex flex-wrap justify-center gap-1.5 mb-4 px-1">
-                  {Array.from({length: character.maxStress}).map((_, i) => (
-                    <button 
-                        key={i}
-                        onClick={() => setCharacter(c => ({...c, stress: i + 1 === c.stress ? i : i + 1}))}
-                        className={`w-5 h-5 rounded-full border border-purple-500 transition-all ${
-                            i < character.stress ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-transparent opacity-30'
-                        }`}
-                    />
-                  ))}
-              </div>
+            {/* Stress - Full Width Horizontal */}
+            <div className="col-span-2 glass-panel rounded-xl p-3 flex items-center justify-between px-6 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-sm uppercase tracking-wider text-slate-400">Stress</h3>
+                    <button onClick={() => handleStaticInfo("Stress")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
+                </div>
+                <div className="flex gap-2">
+                    {Array.from({length: character.maxStress}).map((_, i) => (
+                        <button 
+                            key={i}
+                            onClick={() => setCharacter(c => ({...c, stress: i + 1 === c.stress ? i : i + 1}))}
+                            className={`w-6 h-6 rounded-full border border-purple-500 transition-all ${
+                                i < character.stress ? 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-transparent opacity-30'
+                            }`}
+                        />
+                    ))}
+                </div>
+                <span className="text-xl font-bold text-purple-500">{character.stress}</span>
             </div>
             
-             {/* Hope */}
-             <div className="col-span-3 glass-panel rounded-xl p-3 flex items-center justify-between px-6 relative overflow-hidden">
+             {/* Hope - Full Width Horizontal */}
+             <div className="col-span-2 glass-panel rounded-xl p-3 flex items-center justify-between px-6 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-dagger-hope"></div>
                 <div className="flex items-center gap-2">
                     <h3 className="text-sm uppercase tracking-wider text-slate-400">Hope</h3>
@@ -493,7 +658,7 @@ export default function App() {
                                 Ask AI
                             </button>
                             <button 
-                                onClick={(e) => { e.stopPropagation(); handleDeleteWeapon(w.id); }}
+                                onClick={(e) => { e.stopPropagation(); requestDeleteWeapon(w.id); }}
                                 className="text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <TrashIcon />
@@ -517,7 +682,7 @@ export default function App() {
                 {character.abilities.map(a => (
                     <div key={a.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors relative group">
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                             <button onClick={(e) => { e.stopPropagation(); handleDeleteAbility(a.id); }} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
+                             <button onClick={(e) => { e.stopPropagation(); requestDeleteAbility(a.id); }} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
                         </div>
                         <div className="cursor-pointer" onClick={() => handleAskAI(`Ability: ${a.name}`, a.description)}>
                             <div className="flex justify-between mb-1">
@@ -550,7 +715,7 @@ export default function App() {
                         <span className="text-sm text-slate-300">{e.name}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-dagger-hope">+{e.value}</span>
-                            <button onClick={(ev) => { ev.stopPropagation(); handleDeleteExperience(i); }} className="text-slate-600 hover:text-red-400 p-2"><TrashIcon /></button>
+                            <button onClick={(ev) => { ev.stopPropagation(); requestDeleteExperience(i); }} className="text-slate-600 hover:text-red-400 p-2"><TrashIcon /></button>
                         </div>
                     </div>
                 ))}
@@ -565,7 +730,7 @@ export default function App() {
                     <button onClick={() => handleStaticInfo("Inventory")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
                  </div>
                 <div className="flex gap-2 items-center">
-                    <button onClick={() => handleStaticInfo("Gold")} className="text-xs text-dagger-gold border border-dagger-gold/30 px-1 rounded hover:bg-dagger-gold/10 cursor-help">{character.gold}g</button>
+                    <button onClick={() => setActiveModal('GOLD')} className="text-xs text-dagger-gold border border-dagger-gold/30 px-1 rounded hover:bg-dagger-gold/10 cursor-help">{character.gold}g</button>
                     <button onClick={() => setActiveModal('INVENTORY')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
                 </div>
             </div>
@@ -576,7 +741,7 @@ export default function App() {
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
                             {item}
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); handleDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
+                        <button onClick={(e) => { e.stopPropagation(); requestDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
                     </li>
                 ))}
             </ul>
@@ -584,7 +749,24 @@ export default function App() {
         </div>
       </main>
 
-      {/* --- FOOTER USAGE STATS --- */}
+      {/* --- FLOATING STATUS INDICATORS --- */}
+      
+      {/* Save Status (Bottom Left, above API Stats) */}
+      <div className={`fixed bottom-14 left-4 z-40 flex items-center gap-2 px-4 py-2 rounded-full border shadow-lg backdrop-blur transition-all pointer-events-none ${saveStatus === 'saved' ? 'bg-slate-900/80 border-green-900/50 text-green-500' : 'bg-slate-800/80 border-slate-700 text-slate-400'}`}>
+        {saveStatus === 'saving' ? (
+            <>
+                <div className="w-4 h-4 border-2 border-t-transparent border-slate-400 rounded-full animate-spin"></div>
+                <span className="text-xs font-semibold">Saving...</span>
+            </>
+        ) : (
+            <>
+                <CheckIcon />
+                <span className="text-xs font-semibold">Saved</span>
+            </>
+        )}
+      </div>
+
+      {/* API Stats (Bottom Left) */}
       <div className="fixed bottom-4 left-4 z-40 bg-slate-900/80 backdrop-blur border border-slate-700 rounded-full px-4 py-2 text-xs text-slate-400 shadow-lg pointer-events-none">
         <span className="font-mono font-semibold text-dagger-hope">{usageStats.calls}</span> API Calls
         <span className="mx-2 opacity-50">|</span>
@@ -697,7 +879,16 @@ export default function App() {
         />
       )}
 
-      {/* 6. Info/AI Modal */}
+      {/* 6. Gold Exchange Modal */}
+      {activeModal === 'GOLD' && (
+        <GoldExchangeModal
+            currentGold={character.gold}
+            onUpdate={handleUpdateGold}
+            onClose={() => setActiveModal('NONE')}
+        />
+      )}
+
+      {/* 7. Info/AI Modal */}
       {activeModal === 'INFO_MODAL' && (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -725,7 +916,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 7. Character Select Modal */}
+      {/* 8. Character Select Modal */}
       {activeModal === 'CHAR_SELECT' && (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -744,7 +935,7 @@ export default function App() {
                     <div className="font-bold text-white">{char.name}</div>
                     <div className="text-xs text-slate-400">{char.class} Level {char.level}</div>
                   </div>
-                  <button onClick={() => handleDeleteSavedChar(char.id!)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded">
+                  <button onClick={() => requestDeleteSavedChar(char.id!)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded">
                     <TrashIcon />
                   </button>
                 </div>
@@ -753,11 +944,115 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* 9. Delete Confirmation Modal */}
+      {deleteModal && (
+          <DeleteConfirmModal 
+              title={deleteModal.title}
+              message={deleteModal.message}
+              onConfirm={deleteModal.onConfirm}
+              onClose={() => setDeleteModal(null)}
+          />
+      )}
     </div>
   );
 }
 
 // --- SUB-COMPONENTS FOR EDITING ---
+
+function DeleteConfirmModal({ title, message, onConfirm, onClose }: { title: string, message: string, onConfirm: () => void, onClose: () => void }) {
+    return (
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-900 rounded-xl w-full max-w-sm border border-slate-700 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
+                <p className="text-slate-400 mb-6 text-sm">{message}</p>
+                <div className="flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded shadow-lg shadow-red-900/20 transition-colors">
+                        Delete
+                    </button>
+                </div>
+             </div>
+        </div>
+    )
+}
+
+function GoldExchangeModal({ currentGold, onUpdate, onClose }: { currentGold: number, onUpdate: (val: number) => void, onClose: () => void }) {
+    // Break down gold
+    const [chests, setChests] = useState(Math.floor(currentGold / 1000));
+    const [bags, setBags] = useState(Math.floor((currentGold % 1000) / 100));
+    const [handfuls, setHandfuls] = useState(Math.floor((currentGold % 100) / 10));
+    const [coins, setCoins] = useState(currentGold % 10);
+
+    // Effect to calculate total and propagate up, and handle rollover logic
+    useEffect(() => {
+        let newChests = chests;
+        let newBags = bags;
+        let newHandfuls = handfuls;
+        let newCoins = coins;
+
+        // Rollover logic: 10 small = 1 big
+        if (newCoins >= 10) { newHandfuls += Math.floor(newCoins / 10); newCoins %= 10; }
+        if (newHandfuls >= 10) { newBags += Math.floor(newHandfuls / 10); newHandfuls %= 10; }
+        if (newBags >= 10) { newChests += Math.floor(newBags / 10); newBags %= 10; }
+
+        // Rollunder logic (if negative, though inputs usually prevent this, good for safety)
+        // For drag inputs, we only allow >= 0 in the UI, but ensuring consistent state:
+        
+        // Update local state if it changed due to rollover to keep UI in sync
+        if (newCoins !== coins || newHandfuls !== handfuls || newBags !== bags || newChests !== chests) {
+             setCoins(newCoins);
+             setHandfuls(newHandfuls);
+             setBags(newBags);
+             setChests(newChests);
+        }
+
+        const total = (newChests * 1000) + (newBags * 100) + (newHandfuls * 10) + newCoins;
+        if (total !== currentGold) {
+            onUpdate(total);
+        }
+    }, [chests, bags, handfuls, coins]);
+
+
+    return (
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-xl text-dagger-gold">Currency Exchange</h3>
+                    <div className="text-right">
+                        <div className="text-xs text-slate-400 uppercase">Total Gold</div>
+                        <div className="text-2xl font-bold text-white">{currentGold}g</div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4 mb-8">
+                    <DraggableValue value={chests} onChange={setChests} label="Chests (1000g)" />
+                    <DraggableValue value={bags} onChange={setBags} label="Bags (100g)" />
+                    <DraggableValue value={handfuls} onChange={setHandfuls} label="Handfuls (10g)" />
+                    <DraggableValue value={coins} onChange={setCoins} label="Coins (1g)" />
+                </div>
+
+                <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700 text-sm text-slate-400 italic mb-6">
+                    "Currency in Daggerheart is fluid. 10 coins make a handful, 10 handfuls a bag, and 10 bags a chest."
+                </div>
+
+                <div className="flex justify-end">
+                    <button onClick={onClose} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-bold transition-colors">
+                        Done
+                    </button>
+                </div>
+             </div>
+        </div>
+    )
+}
 
 function EditCharacterModal({ character, onSave, onClose }: { character: CharacterProfile, onSave: (data: Partial<CharacterProfile>) => void, onClose: () => void }) {
     const [formData, setFormData] = useState(character);
@@ -935,10 +1230,6 @@ function EditCharacterModal({ character, onSave, onClose }: { character: Charact
                             <label className="block text-xs text-slate-400 mb-1">Max Hope</label>
                             <input type="number" name="maxHope" value={formData.maxHope} onChange={handleChange} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:border-dagger-hope outline-none" />
                         </div>
-                        <div>
-                            <label className="block text-xs text-dagger-gold mb-1">Gold</label>
-                            <input type="number" name="gold" value={formData.gold} onChange={handleChange} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:border-dagger-gold outline-none" />
-                        </div>
                          <div>
                             <label className="block text-xs text-slate-400 mb-1">Evasion</label>
                             <input type="number" name="evasion" value={formData.evasion} onChange={handleChange} className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white focus:border-dagger-hope outline-none" />
@@ -958,7 +1249,7 @@ function EditCharacterModal({ character, onSave, onClose }: { character: Charact
 
 function AddWeaponModal({ onSave, onClose }: { onSave: (w: Weapon) => void, onClose: () => void }) {
     const [data, setData] = useState<Partial<Weapon>>({
-        name: '', type: 'Physical', damage: '', range: '', description: '', trait: TraitType.Strength
+        name: '', type: 'Physical', damage: '', range: 'Melee', description: '', trait: TraitType.Strength
     });
 
     const handleSubmit = () => {
@@ -976,7 +1267,11 @@ function AddWeaponModal({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
                 <input placeholder="Name" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
                 <div className="grid grid-cols-2 gap-2">
                     <input placeholder="Damage (e.g. d8+2)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.damage} onChange={e => setData({...data, damage: e.target.value})} />
-                    <input placeholder="Range (e.g. Melee)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.range} onChange={e => setData({...data, range: e.target.value})} />
+                    
+                    {/* Range Dropdown */}
+                    <select className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.range} onChange={e => setData({...data, range: e.target.value})}>
+                        {WEAPON_RANGES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                      <select className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.type} onChange={e => setData({...data, type: e.target.value as any})}>
@@ -1001,26 +1296,64 @@ function AddAbilityModal({ onSave, onClose }: { onSave: (a: AbilityCard) => void
     const [data, setData] = useState<Partial<AbilityCard>>({
         name: '', domain: '', cost: '', description: '', level: 1, active: true
     });
+    
+    // Auto-detect class/domain context if possible from app state, but here we'll just show suggestions
+    const [filteredAbilities, setFilteredAbilities] = useState(SAMPLE_ABILITIES);
 
     const handleSubmit = () => {
         if (!data.name) return;
         onSave({ ...data, id: generateSimpleId() } as AbilityCard);
     };
 
+    const handleSuggestion = (ability: typeof SAMPLE_ABILITIES[0]) => {
+        setData({
+            name: ability.name,
+            domain: ability.domain,
+            cost: ability.cost,
+            description: ability.description,
+            level: ability.level,
+            active: true
+        });
+    }
+
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={onClose}
         >
-             <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg text-white">Add Ability</h3>
-                <input placeholder="Name" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
-                <div className="grid grid-cols-2 gap-2">
-                    <input placeholder="Domain (e.g. Blade)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.domain} onChange={e => setData({...data, domain: e.target.value})} />
-                    <input placeholder="Cost (e.g. 1 Hope)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.cost} onChange={e => setData({...data, cost: e.target.value})} />
+             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-white mb-4">Add Ability</h3>
+                
+                <div className="overflow-y-auto dagger-scroll space-y-4 pr-1">
+                    <input placeholder="Name" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-2">
+                        <input placeholder="Domain (e.g. Blade)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.domain} onChange={e => setData({...data, domain: e.target.value})} />
+                        <input placeholder="Cost (e.g. 1 Hope)" className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.cost} onChange={e => setData({...data, cost: e.target.value})} />
+                    </div>
+                    <textarea placeholder="Description" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white h-24" value={data.description} onChange={e => setData({...data, description: e.target.value})} />
+
+                    {/* Suggestions Panel */}
+                    <div className="border-t border-slate-700 pt-3">
+                         <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Suggestions (Level 1)</h4>
+                         <div className="space-y-2">
+                            {filteredAbilities.map(ab => (
+                                <button 
+                                    key={ab.name} 
+                                    onClick={() => handleSuggestion(ab)}
+                                    className="w-full text-left p-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded flex justify-between items-center group"
+                                >
+                                    <div>
+                                        <div className="text-sm font-bold text-dagger-gold">{ab.name}</div>
+                                        <div className="text-[10px] text-slate-400">{ab.domain} • {ab.cost}</div>
+                                    </div>
+                                    <span className="text-slate-500 group-hover:text-white transition-colors">+</span>
+                                </button>
+                            ))}
+                         </div>
+                    </div>
                 </div>
-                <textarea placeholder="Description" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white h-24" value={data.description} onChange={e => setData({...data, description: e.target.value})} />
-                <div className="flex justify-end gap-2">
+
+                <div className="flex justify-end gap-2 mt-4 pt-2 border-t border-slate-700">
                     <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
                     <button onClick={handleSubmit} className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded">Add Ability</button>
                 </div>
