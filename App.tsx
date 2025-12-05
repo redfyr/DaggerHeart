@@ -892,14 +892,22 @@ export default function App() {
       {activeModal === 'INFO_MODAL' && (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setActiveModal('NONE')}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveModal('NONE');
+            }}
+        >
+          <div className="bg-slate-800 rounded-xl..." onClick={e => e.stopPropagation()}>
+            {/* ... content ... */}
+          </div>
+        </div>
+      )}
         >
           <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
               <h3 className="font-bold text-lg text-dagger-gold flex items-center gap-2">
                 <InfoIcon /> {infoModalData.topic}
               </h3>
-              <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
+              <button onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} className="text-slate-400 hover:text-white"><CloseIcon /></button>
             </div>
             <div className="p-6 overflow-y-auto dagger-scroll">
               {infoModalData.loading ? (
@@ -920,12 +928,18 @@ export default function App() {
       {activeModal === 'CHAR_SELECT' && (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setActiveModal('NONE')}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveModal('NONE');
+            }}
+        >
+            {/* ... content ... */}
+        </div>
+      )}
         >
           <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
               <h3 className="font-bold text-white">Saved Characters</h3>
-              <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
+              <button onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} className="text-slate-400 hover:text-white"><CloseIcon /></button>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto dagger-scroll space-y-2">
               {savedCharacters.length === 0 && <p className="text-slate-500 text-center py-4">No saved characters found.</p>}
@@ -964,7 +978,11 @@ function DeleteConfirmModal({ title, message, onConfirm, onClose }: { title: str
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-900 rounded-xl w-full max-w-sm border border-slate-700 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
@@ -1022,7 +1040,11 @@ function GoldExchangeModal({ currentGold, onUpdate, onClose }: { currentGold: nu
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
                 <div className="flex justify-between items-center mb-6">
@@ -1094,7 +1116,11 @@ function EditCharacterModal({ character, onSave, onClose }: { character: Charact
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
           <div className="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-600 shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
@@ -1260,7 +1286,11 @@ function AddWeaponModal({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white">Add Weapon</h3>
@@ -1319,7 +1349,11 @@ function AddAbilityModal({ onSave, onClose }: { onSave: (a: AbilityCard) => void
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white mb-4">Add Ability</h3>
@@ -1379,7 +1413,11 @@ function AddExperienceModal({ onSave, onClose }: { onSave: (e: Experience) => vo
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white mb-4">Add Experience</h3>
@@ -1455,7 +1493,11 @@ function AddInventoryModal({ onSave, onClose }: { onSave: (item: string) => void
     return (
         <div 
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
+            onClick={(e) => {
+  if (e.target === e.currentTarget) {
+    onClose(); // or setActiveModal('NONE')
+  }
+}}
         >
              <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white mb-4">Add Inventory Item</h3>
