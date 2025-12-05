@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,16 +7,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Daggerheart Companion</title>
     <script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-// ... all the color/font definitions ...
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              dagger: {
+                dark: '#0f172a',
+                panel: '#1e293b',
+                gold: '#fbbf24',
+                fear: '#a855f7',
+                hope: '#38bdf8',
+                accent: '#f43f5e'
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+            }
+          }
         }
-      }
-    }
-  };
-</script>
+      };
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./index.css" />
     <style>
