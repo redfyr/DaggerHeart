@@ -175,7 +175,7 @@ export default function App() {
     };
 
     setRollResult(result);
-    setShowRollDetail(false); 
+    setShowRollDetail(true); // Automatically open the roll detail
     
     setLoadingFlavor(true);
     const actionDesc = `making a ${traitName} roll`;
@@ -253,11 +253,11 @@ export default function App() {
     setActiveModal('NONE');
   };
 
-  const handleDeleteExperience = (id: string) => {
+  const handleDeleteExperience = (index: number) => {
      if(confirm("Forget this experience?")) {
         setCharacter(prev => ({
             ...prev,
-            experiences: prev.experiences.filter(e => e.id !== id)
+            experiences: prev.experiences.filter((_, i) => i !== index)
         }));
      }
   };
@@ -462,7 +462,7 @@ export default function App() {
                                 Ask AI
                             </button>
                             <button 
-                                onClick={() => handleDeleteWeapon(w.id)}
+                                onClick={(e) => { e.stopPropagation(); handleDeleteWeapon(w.id); }}
                                 className="text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <TrashIcon />
@@ -486,7 +486,7 @@ export default function App() {
                 {character.abilities.map(a => (
                     <div key={a.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors relative group">
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                             <button onClick={() => handleDeleteAbility(a.id)} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
+                             <button onClick={(e) => { e.stopPropagation(); handleDeleteAbility(a.id); }} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
                         </div>
                         <div className="cursor-pointer" onClick={() => handleAskAI(`Ability: ${a.name}`, a.description)}>
                             <div className="flex justify-between mb-1">
@@ -514,12 +514,12 @@ export default function App() {
                 <button onClick={() => setActiveModal('EXPERIENCE')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
             </div>
             <div className="space-y-2">
-                {character.experiences.map(e => (
-                    <div key={e.id} className="flex justify-between items-center p-2 bg-slate-900/30 rounded border border-slate-700/50 group">
+                {character.experiences.map((e, i) => (
+                    <div key={e.id || i} className="flex justify-between items-center p-2 bg-slate-900/30 rounded border border-slate-700/50 group">
                         <span className="text-sm text-slate-300">{e.name}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-dagger-hope">+{e.value}</span>
-                            <button onClick={() => handleDeleteExperience(e.id)} className="text-slate-600 hover:text-red-400 p-2"><TrashIcon /></button>
+                            <button onClick={(ev) => { ev.stopPropagation(); handleDeleteExperience(i); }} className="text-slate-600 hover:text-red-400 p-2"><TrashIcon /></button>
                         </div>
                     </div>
                 ))}
@@ -545,7 +545,7 @@ export default function App() {
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
                             {item}
                         </div>
-                        <button onClick={() => handleDeleteInventory(i)} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
                     </li>
                 ))}
             </ul>
@@ -565,7 +565,7 @@ export default function App() {
         <>
           {showRollDetail && (
             <div 
-              className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
               onClick={() => setShowRollDetail(false)}
             >
               <div 
@@ -668,8 +668,11 @@ export default function App() {
 
       {/* 6. Info/AI Modal */}
       {activeModal === 'INFO_MODAL' && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setActiveModal('NONE')}
+        >
+          <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
               <h3 className="font-bold text-lg text-dagger-gold flex items-center gap-2">
                 <InfoIcon /> {infoModalData.topic}
@@ -693,8 +696,11 @@ export default function App() {
 
       {/* 7. Character Select Modal */}
       {activeModal === 'CHAR_SELECT' && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setActiveModal('NONE')}
+        >
+          <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
               <h3 className="font-bold text-white">Saved Characters</h3>
               <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
@@ -760,8 +766,11 @@ function EditCharacterModal({ character, onSave, onClose }: { character: Charact
     const subclassOptions = currentClassData ? currentClassData.subclasses : [];
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-600 shadow-2xl flex flex-col max-h-[90vh]">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+          <div className="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-600 shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900">
               <h3 className="font-bold text-lg text-white">Edit Character Profile</h3>
               <button onClick={onClose} className="text-slate-400 hover:text-white"><CloseIcon /></button>
@@ -927,8 +936,11 @@ function AddWeaponModal({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-             <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white">Add Weapon</h3>
                 <input placeholder="Name" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
                 <div className="grid grid-cols-2 gap-2">
@@ -965,8 +977,11 @@ function AddAbilityModal({ onSave, onClose }: { onSave: (a: AbilityCard) => void
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-             <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white">Add Ability</h3>
                 <input placeholder="Name" className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white" value={data.name} onChange={e => setData({...data, name: e.target.value})} />
                 <div className="grid grid-cols-2 gap-2">
@@ -998,8 +1013,11 @@ function AddExperienceModal({ onSave, onClose }: { onSave: (e: Experience) => vo
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[85vh]">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white mb-4">Add Experience</h3>
                 
                 <div className="space-y-4 overflow-y-auto dagger-scroll pr-1 pb-4">
@@ -1071,8 +1089,11 @@ function AddInventoryModal({ onSave, onClose }: { onSave: (item: string) => void
     };
 
     return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[80vh]">
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={onClose}
+        >
+             <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-lg text-white mb-4">Add Inventory Item</h3>
                 
                 {/* Custom Input */}
