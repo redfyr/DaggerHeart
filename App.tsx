@@ -887,7 +887,7 @@ export default function App() {
             onClose={() => setActiveModal('NONE')}
         />
       )}
-
+      
       {/* 7. Info/AI Modal */}
       {activeModal === 'INFO_MODAL' && (
         <div 
@@ -896,18 +896,12 @@ export default function App() {
               if (e.target === e.currentTarget) setActiveModal('NONE');
             }}
         >
-          <div className="bg-slate-800 rounded-xl..." onClick={e => e.stopPropagation()}>
-            {/* ... content ... */}
-          </div>
-        </div>
-      )}
-        >
           <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
               <h3 className="font-bold text-lg text-dagger-gold flex items-center gap-2">
                 <InfoIcon /> {infoModalData.topic}
               </h3>
-              <button onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} className="text-slate-400 hover:text-white"><CloseIcon /></button>
+              <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
             </div>
             <div className="p-6 overflow-y-auto dagger-scroll">
               {infoModalData.loading ? (
@@ -932,14 +926,10 @@ export default function App() {
               if (e.target === e.currentTarget) setActiveModal('NONE');
             }}
         >
-            {/* ... content ... */}
-        </div>
-      )}
-        >
           <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
               <h3 className="font-bold text-white">Saved Characters</h3>
-              <button onClick={(e) => { if (e.target === e.currentTarget) onClose(); }} className="text-slate-400 hover:text-white"><CloseIcon /></button>
+              <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto dagger-scroll space-y-2">
               {savedCharacters.length === 0 && <p className="text-slate-500 text-center py-4">No saved characters found.</p>}
