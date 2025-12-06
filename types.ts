@@ -31,6 +31,8 @@ export interface AbilityCard {
   cost?: string; // e.g., "1 Hope"
   description: string;
   active: boolean;
+  type?: string; // e.g. "Spell", "Ability", "Grimoire"
+  isPreset?: boolean; // true if from the official list and uneditable
 }
 
 export interface Experience {
