@@ -1,3 +1,5 @@
+
+
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.API_KEY || '';
@@ -98,4 +100,35 @@ export const getNarrativeFlavor = async (characterName: string, action: string, 
   } catch (error) {
     return "";
   }
+};
+
+export const sendChatRuleQuery = async (query: string): Promise<string> => {
+    if (!apiKey) return "API Key missing.";
+    
+    const prompt = `You are a helpful rules assistant for Daggerheart TTRPG.
+    User Question: "${query}"
+    
+    Instructions:
+    - Look up DaggerHeart core rules.
+    - Check the Character Sheet for Ancestry, Class, Subclass and Level.
+    - Answer based on standard Daggerheart rules and information in Character Sheet.
+    - Check sequence of ability checks, combat rules and dice rolling.
+    - Give advice on what the best next action is, if there is a next action required.
+    - Keep your answer under 200 tokens.
+    - Be friendly but concise.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        const text = response.text || "I am unsure.";
+        trackUsage(prompt, text);
+        return text;
+    } catch (error) {
+        console.error("Chat Error:", error);
+        return "I cannot answer right now.";
+    }
 };
