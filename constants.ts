@@ -1,4 +1,5 @@
 
+
 import { CharacterProfile, TraitType } from './types';
 
 export const STATIC_INFO: Record<string, { title: string; content: string }> = {
@@ -116,16 +117,265 @@ export const CLASS_DOMAINS: Record<string, string[]> = {
     "Wizard": ["Codex", "Splendor"]
 };
 
-export const SAMPLE_ABILITIES = [
-    { name: "Battlefield Commander", domain: "Blade", level: 1, cost: "1 Hope", description: "Mark an enemy. Allies gain advantage when attacking that enemy until the start of your next turn." },
-    { name: "Whirlwind", domain: "Bone", level: 1, cost: "2 Stress", description: "Attack all enemies within melee range. Mark 1 stress for each enemy targeted beyond the first." },
-    { name: "Arcane Barrage", domain: "Arcana", level: 1, cost: "1 Hope", description: "Fire three missiles of magical energy. Each deals d6 damage." },
-    { name: "Healing Word", domain: "Grace", level: 1, cost: "1 Hope", description: "Heal an ally within Far range for 1d8 HP." },
-    { name: "Shadow Step", domain: "Midnight", level: 1, cost: "1 Stress", description: "Teleport to a location within Close range that is in shadow." },
-    { name: "Rallying Cry", domain: "Valor", level: 1, cost: "2 Hope", description: "All allies within Close range clear 2 Stress." },
-    { name: "Nature's Grasp", domain: "Sage", level: 1, cost: "1 Hope", description: "Vines erupt from the ground, restraining a target within Far range." },
-    { name: "Divine Shield", domain: "Splendor", level: 1, cost: "1 Stress", description: "Grant an ally +2 Armor until the start of your next turn." },
-    { name: "Loremaster", domain: "Codex", level: 1, cost: "Passive", description: "Gain +2 to all Knowledge rolls related to history or magic." }
+export const DOMAIN_DESCRIPTIONS: Record<string, { description: string, classes: string }> = {
+    "Arcana": { 
+        description: "The domain of innate and instinctual magic. Those who choose this path tap into the raw, enigmatic forces of the realms to manipulate both their own energy and the elements. Arcana offers wielders a volatile power, but it is incredibly potent when correctly channeled.", 
+        classes: "Druid, Sorcerer" 
+    },
+    "Blade": { 
+        description: "The domain of weapon mastery. Whether by steel, bow, or perhaps a more specialized arm, those who follow this path have the skill to cut short the lives of others. Wielders of Blade dedicate themselves to achieving inexorable power over death.", 
+        classes: "Guardian, Warrior" 
+    },
+    "Bone": { 
+        description: "The domain of tactics and the body. Practitioners of this domain have an uncanny control over their own physical abilities and an eye for predicting the behaviors of others in combat. Adherents to Bone gain an unparalleled understanding of bodies and their movements.", 
+        classes: "Ranger, Warrior" 
+    },
+    "Codex": { 
+        description: "The domain of intensive magical study. Those who seek magical knowledge turn to the equations of power recorded in books, written on scrolls, etched into walls, or tattooed on bodies. Codex offers a commanding and versatile understanding of magic to devotees who pursue knowledge beyond the boundaries of common wisdom.", 
+        classes: "Bard, Wizard" 
+    },
+    "Grace": { 
+        description: "The domain of charisma. Through rapturous storytelling, charming spells, or a shroud of lies, those who channel this power define the realities of their adversaries, bending perception to their will. Grace offers its wielders raw magnetism and mastery over language.", 
+        classes: "Bard, Rogue" 
+    },
+    "Midnight": { 
+        description: "The domain of shadows and secrecy. Whether by clever tricks, deft magic, or the cloak of night, those who channel these forces practice the art of obscurity and can uncover sequestered treasures. Midnight offers practitioners the power to control and create enigmas.", 
+        classes: "Rogue, Sorcerer" 
+    },
+    "Sage": { 
+        description: "The domain of the natural world. Those who walk this path tap into the unfettered power of the earth and its creatures to unleash raw magic. Sage grants its adherents the vitality of a blooming flower and the ferocity of a ravenous predator.", 
+        classes: "Druid, Ranger" 
+    },
+    "Splendor": { 
+        description: "The domain of life. Through this magic, followers gain the ability to heal and, to an extent, control death. Splendor offers its disciples the magnificent ability to both give and end life.", 
+        classes: "Seraph, Wizard" 
+    },
+    "Valor": { 
+        description: "The domain of protection. Whether through attack or defense, those who choose this discipline channel formidable strength to protect their allies in battle. Valor offers great power to those who raise their shields in defense of others.", 
+        classes: "Guardian, Seraph" 
+    }
+};
+
+export const DOMAIN_RESOURCES: Record<string, { icon: string, colorBg: string }> = {
+  "Arcana": { icon: "https://i.imgur.com/OZgsbP7.png", colorBg: "bg-[#783B8D]" },
+  "Blade": { icon: "https://i.imgur.com/nB6E2pV.png", colorBg: "bg-[#AD2A2F]" },
+  "Bone": { icon: "https://i.imgur.com/6cqhBpV.png", colorBg: "bg-[#C8D0D4]" },
+  "Codex": { icon: "https://i.imgur.com/C2R8z6F.png", colorBg: "bg-[#376CBC]" },
+  "Grace": { icon: "https://i.imgur.com/oi5h7h2.png", colorBg: "bg-[#C22684]" },
+  "Midnight": { icon: "https://i.imgur.com/dIMFZTZ.png", colorBg: "bg-[#363A37]" },
+  "Sage": { icon: "https://i.imgur.com/l0RmBU8.png", colorBg: "bg-[#287841]" },
+  "Splendor": { icon: "https://i.imgur.com/nLAVlZh.png", colorBg: "bg-[#DFC514]" },
+  "Valor": { icon: "https://i.imgur.com/JxCX0Zg.png", colorBg: "bg-[#D8611C]" },
+};
+
+export interface DomainCardData {
+    domain: string;
+    level: number;
+    name: string;
+    type: string; // Spell, Ability, Grimoire
+    cost: string; // "1 Hope", "0"
+    description: string;
+}
+
+export const ALL_DOMAIN_CARDS: DomainCardData[] = [
+    // Arcana
+    { domain: "Arcana", level: 1, name: "Rune Ward", type: "Spell", cost: "0", description: "Personal trinket infused with protective magic. Ward's holder can spend Hope to reduce damage by 1d8." },
+    { domain: "Arcana", level: 1, name: "Unleash Chaos", type: "Spell", cost: "1 Hope", description: "Channel raw energy dealing d10s equal to tokens spent as magic damage." },
+    { domain: "Arcana", level: 1, name: "Wall Walk", type: "Spell", cost: "1 Hope", description: "Spend Hope to allow creature to climb walls and ceilings as easily as walking." },
+    { domain: "Arcana", level: 2, name: "Cinder Grasp", type: "Spell", cost: "1 Hope", description: "Target bursts into flames, takes 1d20+3 magic damage, and is temporarily On Fire." },
+    { domain: "Arcana", level: 2, name: "Floating Eye", type: "Spell", cost: "0", description: "Create small floating orb you can move and see through." },
+    { domain: "Arcana", level: 3, name: "Counterspell", type: "Spell", cost: "2 Hope", description: "Interrupt a magical effect with reaction roll." },
+    { domain: "Arcana", level: 3, name: "Flight", type: "Spell", cost: "1 Hope", description: "Gain ability to fly with tokens equal to Agility." },
+    { domain: "Arcana", level: 4, name: "Blink Out", type: "Spell", cost: "1 Hope", description: "Teleport to a point you can see within Far range." },
+    { domain: "Arcana", level: 4, name: "Preservation Blast", type: "Spell", cost: "2 Hope", description: "Force all targets within Melee range back to Far range dealing d8+3 magic damage." },
+    { domain: "Arcana", level: 5, name: "Chain Lightning", type: "Spell", cost: "1 Hope", description: "Unleash lightning on all targets within Close range dealing 2d8+4 magic damage." },
+    { domain: "Arcana", level: 5, name: "Premonition", type: "Spell", cost: "2 Hope", description: "After GM conveys consequences, rescind move and make another move instead." },
+    { domain: "Arcana", level: 6, name: "Rift Walker", type: "Spell", cost: "2 Hope", description: "Place arcane marking to create rift portals." },
+    { domain: "Arcana", level: 6, name: "Telekinesis", type: "Spell", cost: "0", description: "Move target anywhere within Far range with Spellcast Roll." },
+    { domain: "Arcana", level: 7, name: "Arcana-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Arcana cards, gain +1 Spellcast and can switch Hope/Fear dice results." },
+    { domain: "Arcana", level: 7, name: "Cloaking Blast", type: "Spell", cost: "2 Hope", description: "After successful Spellcast, spend Hope to become Cloaked." },
+    { domain: "Arcana", level: 8, name: "Arcane Reflection", type: "Spell", cost: "1 Hope", description: "When taking magic damage, roll d6s to potentially reflect attack." },
+    { domain: "Arcana", level: 8, name: "Confusing Aura", type: "Spell", cost: "2 Hope", description: "Create illusion layers that cause attacks against you to fail." },
+    { domain: "Arcana", level: 9, name: "Earthquake", type: "Spell", cost: "2 Hope", description: "All targets within Very Far range take 3d10+8 physical damage and become Vulnerable." },
+    { domain: "Arcana", level: 9, name: "Sensory Projection", type: "Spell", cost: "0", description: "See and hear any place you have been before." },
+    { domain: "Arcana", level: 10, name: "Adjust Reality", type: "Spell", cost: "5 Hope", description: "Spend 5 Hope to change roll result to plausible result of choice." },
+    { domain: "Arcana", level: 10, name: "Falling Sky", type: "Spell", cost: "1 Hope", description: "Make shards of arcana rain down dealing 1d20+2 magic damage per Stress." },
+    // Blade
+    { domain: "Blade", level: 1, name: "Get Back Up", type: "Ability", cost: "1 Hope", description: "When taking Severe damage, mark Stress to reduce severity by one threshold." },
+    { domain: "Blade", level: 1, name: "Not Good Enough", type: "Ability", cost: "1 Hope", description: "Reroll any 1s or 2s on damage dice." },
+    { domain: "Blade", level: 1, name: "Whirlwind", type: "Ability", cost: "0", description: "On successful attack, spend Hope to attack all targets within Very Close range for half damage." },
+    { domain: "Blade", level: 2, name: "A Soldier's Bond", type: "Ability", cost: "1 Hope", description: "When complimenting ally's skill, both gain 3 Hope." },
+    { domain: "Blade", level: 2, name: "Reckless", type: "Ability", cost: "1 Hope", description: "Mark Stress to gain advantage on attack." },
+    { domain: "Blade", level: 3, name: "Scramble", type: "Ability", cost: "1 Hope", description: "When creature within Melee would deal damage, avoid attack and move out of range." },
+    { domain: "Blade", level: 3, name: "Versatile Fighter", type: "Ability", cost: "1 Hope", description: "Use different trait for equipped weapon. Mark Stress to use max damage die." },
+    { domain: "Blade", level: 4, name: "Deadly Focus", type: "Ability", cost: "2 Hope", description: "Gain +1 Proficiency bonus against target until attacking another." },
+    { domain: "Blade", level: 4, name: "Fortified Armor", type: "Ability", cost: "0", description: "While wearing armor, gain +2 to damage thresholds." },
+    { domain: "Blade", level: 5, name: "Champion's Edge", type: "Ability", cost: "1 Hope", description: "On critical success, spend Hope to clear HP/Armor or force additional HP marks." },
+    { domain: "Blade", level: 5, name: "Vitality", type: "Ability", cost: "0", description: "Permanently gain two of: Stress slot, Hit Point slot, or +2 damage thresholds." },
+    { domain: "Blade", level: 6, name: "Battle-Hardened", type: "Ability", cost: "2 Hope", description: "When making Death Move, spend Hope to clear Hit Point instead." },
+    { domain: "Blade", level: 6, name: "Rage Up", type: "Ability", cost: "1 Hope", description: "Before attack, mark Stress to gain bonus equal to twice Strength." },
+    { domain: "Blade", level: 7, name: "Blade-Touched", type: "Ability", cost: "1 Hope", description: "When 4+ Blade cards, gain +2 attack rolls and +4 Severe threshold." },
+    { domain: "Blade", level: 7, name: "Glancing Blow", type: "Ability", cost: "1 Hope", description: "When attack fails, mark Stress to deal weapon damage using half Proficiency." },
+    { domain: "Blade", level: 8, name: "Battle Cry", type: "Ability", cost: "2 Hope", description: "While charging, call lets allies clear Stress and gain Hope, gain advantage." },
+    { domain: "Blade", level: 8, name: "Frenzy", type: "Ability", cost: "3 Hope", description: "Go into Frenzy: can't use Armor Slots, gain +10 damage and +8 Severe threshold." },
+    { domain: "Blade", level: 9, name: "Gore and Glory", type: "Ability", cost: "2 Hope", description: "On critical success or defeating enemy, gain Hope or clear Stress." },
+    { domain: "Blade", level: 9, name: "Reaper's Strike", type: "Ability", cost: "3 Hope", description: "Spend Hope to force target to mark 5 Hit Points." },
+    { domain: "Blade", level: 10, name: "Battle Monster", type: "Ability", cost: "0", description: "Mark 4 Stress to force target to mark HP equal to your marked HP." },
+    { domain: "Blade", level: 10, name: "Onslaught", type: "Ability", cost: "3 Hope", description: "Never deal damage below Major threshold (minimum 2 HP)." },
+    // Bone
+    { domain: "Bone", level: 1, name: "Deft Maneuvers", type: "Ability", cost: "0", description: "Mark Stress to sprint within Far range without roll. Gain +1 attack if ending in Melee. "},
+    { domain: "Bone", level: 1, name: "I See It Coming", type: "Ability", cost: "1 Hope", description: "When targeted by attack beyond Melee, mark Stress to roll d4 and add to Evasion." },
+    { domain: "Bone", level: 1, name: "Untouchable", type: "Ability", cost: "1 Hope", description: "Gain bonus to Evasion equal to half your Agility." },
+    { domain: "Bone", level: 2, name: "Ferocity", type: "Ability", cost: "2 Hope", description: "When causing damage, spend 2 Hope to increase Evasion by HP marked." },
+    { domain: "Bone", level: 2, name: "Strategic Approach", type: "Ability", cost: "1 Hope", description: "After rest, place tokens equal to Knowledge. Spend for advantage or d8 damage." },
+    { domain: "Bone", level: 3, name: "Brace", type: "Ability", cost: "1 Hope", description: "When marking Armor Slot, mark Stress to mark additional Armor Slot." },
+    { domain: "Bone", level: 3, name: "Tactician", type: "Ability", cost: "1 Hope", description: "When Helping Ally, they can use your Experiences. Tag Team Roll with d20 as Hope." },
+    { domain: "Bone", level: 4, name: "Boost", type: "Ability", cost: "1 Hope", description: "Mark Stress to boost off ally, perform aerial attack with advantage and d10 bonus." },
+    { domain: "Bone", level: 4, name: "Redirect", type: "Ability", cost: "1 Hope", description: "When attack beyond Melee fails, roll d6s to potentially redirect to adversary." },
+    { domain: "Bone", level: 5, name: "Know Thy Enemy", type: "Ability", cost: "1 Hope", description: "Make Instinct Roll against creature to learn HP, Difficulty, tactics, or features." },
+    { domain: "Bone", level: 5, name: "Signature Move", type: "Ability", cost: "1 Hope", description: "Name signature move. When performing, roll d20 as Hope Die." },
+    { domain: "Bone", level: 6, name: "Rapid Riposte", type: "Ability", cost: "0", description: "When Melee attack fails, mark Stress to deal weapon damage to attacker." },
+    { domain: "Bone", level: 6, name: "Recovery", type: "Ability", cost: "1 Hope", description: "During short rest, choose long rest downtime move instead." },
+    { domain: "Bone", level: 7, name: "Bone-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Bone cards, gain +1 Agility and can spend 3 Hope to negate attack." },
+    { domain: "Bone", level: 7, name: "Cruel Precision", type: "Ability", cost: "1 Hope", description: "On successful weapon attack, gain bonus equal to Finesse or Agility." },
+    { domain: "Bone", level: 8, name: "Breaking Blow", type: "Ability", cost: "3 Hope", description: "On successful attack, next attack on same target deals extra 2d12 damage." },
+    { domain: "Bone", level: 8, name: "Wrangle", type: "Ability", cost: "1 Hope", description: "Make Agility Roll to move targets and allies to another point within range." },
+    { domain: "Bone", level: 9, name: "On The Brink", type: "Ability", cost: "1 Hope", description: "When you have 2 or fewer unmarked HP, you don't take Minor damage." },
+    { domain: "Bone", level: 9, name: "Splintering Strike", type: "Ability", cost: "3 Hope", description: "Spend Hope to attack all adversaries within weapon range, redistribute damage." },
+    { domain: "Bone", level: 10, name: "Deathrun", type: "Ability", cost: "1 Hope", description: "Spend 3 Hope to run straight path within Far range, attacking all adversaries." },
+    { domain: "Bone", level: 10, name: "Swift Step", type: "Ability", cost: "2 Hope", description: "When attack fails, clear Stress. If can't, gain Hope." },
+    // Codex
+    { domain: "Codex", level: 1, name: "Book of Ava", type: "Grimoire", cost: "2 Hope", description: "Contains Power Push, Tava's Armor, and Ice Spike spells." },
+    { domain: "Codex", level: 1, name: "Book of Illiat", type: "Grimoire", cost: "2 Hope", description: "Contains Slumber, Arcane Barrage, and Telepathy spells." },
+    { domain: "Codex", level: 1, name: "Book of Tyfar", type: "Grimoire", cost: "2 Hope", description: "Contains Wild Flame, Magic Hand, and Mysterious Mist spells." },
+    { domain: "Codex", level: 2, name: "Book of Sitil", type: "Grimoire", cost: "2 Hope", description: "Contains Adjust Appearance, Parallela, and Illusion spells." },
+    { domain: "Codex", level: 2, name: "Book of Vagras", type: "Grimoire", cost: "2 Hope", description: "Contains Runic Lock, Arcane Door, and Reveal spells." },
+    { domain: "Codex", level: 3, name: "Book of Korvax", type: "Grimoire", cost: "2 Hope", description: "Contains Levitation, Recant, and Rune Circle spells." },
+    { domain: "Codex", level: 3, name: "Book of Norai", type: "Grimoire", cost: "2 Hope", description: "Contains Mystic Tether and Fireball spells." },
+    { domain: "Codex", level: 4, name: "Book of Exota", type: "Grimoire", cost: "3 Hope", description: "Contains Repudiate and Create Construct spells." },
+    { domain: "Codex", level: 4, name: "Book of Grynn", type: "Grimoire", cost: "2 Hope", description: "Contains Arcane Deflection, Time Lock, and Wall of Flame spells." },
+    { domain: "Codex", level: 5, name: "Manifest Wall", type: "Spell", cost: "2 Hope", description: "Create magical wall that blocks creatures and objects." },
+    { domain: "Codex", level: 5, name: "Teleport", type: "Spell", cost: "2 Hope", description: "Teleport yourself and willing targets to place you've been before." },
+    { domain: "Codex", level: 6, name: "Banish", type: "Spell", cost: "0", description: "Banish target from realm on failure of reaction roll." },
+    { domain: "Codex", level: 6, name: "Sigil of Retribution", type: "Spell", cost: "2 Hope", description: "Mark adversary with sigil; accumulate dice to add to damage." },
+    { domain: "Codex", level: 7, name: "Book of Homet", type: "Grimoire", cost: "0", description: "Contains Pass Through and Plane Gate spells." },
+    { domain: "Codex", level: 7, name: "Codex-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Codex cards, mark Stress to add Proficiency to Spellcast Roll." },
+    { domain: "Codex", level: 8, name: "Book of Vyola", type: "Grimoire", cost: "2 Hope", description: "Contains Memory Delve and Shared Clarity spells." },
+    { domain: "Codex", level: 8, name: "Safe Haven", type: "Spell", cost: "3 Hope", description: "Summon interdimensional home with magical door." },
+    { domain: "Codex", level: 9, name: "Book of Ronin", type: "Grimoire", cost: "4 Hope", description: "Contains Transform and Eternal Enervation spells." },
+    { domain: "Codex", level: 9, name: "Disintegration Wave", type: "Spell", cost: "4 Hope", description: "Kill adversaries within Far range with Difficulty 18 or lower." },
+    { domain: "Codex", level: 10, name: "Book of Yarrow", type: "Grimoire", cost: "2 Hope", description: "Contains Timejammer and Magic Immunity spells." },
+    { domain: "Codex", level: 10, name: "Transcendent Union", type: "Spell", cost: "1 Hope", description: "Link willing creatures so they can choose who marks Stress or HP." },
+    // Grace
+    { domain: "Grace", level: 1, name: "Deft Deceiver", type: "Ability", cost: "0", description: "Spend Hope to gain advantage on roll to deceive or trick someone." },
+    { domain: "Grace", level: 1, name: "Enrapture", type: "Spell", cost: "0", description: "Enrapture target, fixing their attention on you." },
+    { domain: "Grace", level: 1, name: "Inspirational Words", type: "Ability", cost: "1 Hope", description: "After rest, place tokens equal to Presence to clear Stress/HP or give Hope." },
+    { domain: "Grace", level: 2, name: "Tell No Lies", type: "Spell", cost: "1 Hope", description: "Prevent target from lying while within Close range." },
+    { domain: "Grace", level: 2, name: "Troublemaker", type: "Ability", cost: "2 Hope", description: "When taunting target, roll d4s equal to Proficiency; target marks Stress." },
+    { domain: "Grace", level: 3, name: "Hypnotic Shimmer", type: "Spell", cost: "1 Hope", description: "Stun all adversaries within Close range and force them to mark Stress." },
+    { domain: "Grace", level: 3, name: "Invisibility", type: "Spell", cost: "1 Hope", description: "Make self or ally Invisible with tokens equal to Spellcast trait." },
+    { domain: "Grace", level: 4, name: "Soothing Speech", type: "Ability", cost: "1 Hope", description: "During rest, when comforting another, clear additional Hit Points." },
+    { domain: "Grace", level: 4, name: "Through Your Eyes", type: "Spell", cost: "1 Hope", description: "See and hear through target's senses until next rest." },
+    { domain: "Grace", level: 5, name: "Thought Delver", type: "Spell", cost: "2 Hope", description: "Read surface thoughts of target or delve deeper with Spellcast Roll." },
+    { domain: "Grace", level: 5, name: "Words of Discord", type: "Spell", cost: "1 Hope", description: "Force target to attack another adversary." },
+    { domain: "Grace", level: 6, name: "Never Upstaged", type: "Ability", cost: "2 Hope", description: "When marking HP from attack, place tokens to boost next damage." },
+    { domain: "Grace", level: 6, name: "Share the Burden", type: "Spell", cost: "0", description: "Take on Stress from willing creature, gaining Hope for each." },
+    { domain: "Grace", level: 7, name: "Endless Charisma", type: "Ability", cost: "1 Hope", description: "After action roll to persuade/lie/garner favor, spend Hope to reroll die." },
+    { domain: "Grace", level: 7, name: "Grace-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Grace cards, mark Armor Slot instead of Stress." },
+    { domain: "Grace", level: 8, name: "Astral Projection", type: "Spell", cost: "0", description: "Create projected copy of yourself that can appear anywhere you've been." },
+    { domain: "Grace", level: 8, name: "Mass Enrapture", type: "Spell", cost: "3 Hope", description: "Enrapture all targets within Far range." },
+    { domain: "Grace", level: 9, name: "Copycat", type: "Spell", cost: "3 Hope", description: "Mimic features of another domain card level 8 or lower in another player's loadout." },
+    { domain: "Grace", level: 9, name: "Master of the Craft", type: "Ability", cost: "0", description: "Gain permanent +2 bonus to two Experiences or +3 to one." },
+    { domain: "Grace", level: 10, name: "Encore", type: "Spell", cost: "1 Hope", description: "When ally deals damage, make Spellcast Roll to deal same damage." },
+    { domain: "Grace", level: 10, name: "Notorious", type: "Ability", cost: "0", description: "Mark Stress before roll to gain +10 when leveraging notoriety." },
+    // Midnight
+    { domain: "Midnight", level: 1, name: "Pick and Pull", type: "Ability", cost: "0", description: "Advantage on rolls to pick locks, disarm traps, or steal items." },
+    { domain: "Midnight", level: 1, name: "Rain of Blades", type: "Spell", cost: "1 Hope", description: "Conjure throwing blades striking all targets within Very Close for d8+2 damage." },
+    { domain: "Midnight", level: 1, name: "Uncanny Disguise", type: "Spell", cost: "0", description: "Don facade of any humanoid with advantage on Presence Rolls." },
+    { domain: "Midnight", level: 2, name: "Midnight Spirit", type: "Spell", cost: "1 Hope", description: "Summon spirit to move or carry things until next rest." },
+    { domain: "Midnight", level: 2, name: "Shadowbind", type: "Spell", cost: "0", description: "Temporarily Restrain all adversaries within Very Close range." },
+    { domain: "Midnight", level: 3, name: "Chokehold", type: "Ability", cost: "1 Hope", description: "Pull target behind you into chokehold, making them Vulnerable." },
+    { domain: "Midnight", level: 3, name: "Veil of Night", type: "Spell", cost: "1 Hope", description: "Create curtain of darkness. You are Hidden with advantage on attacks." },
+    { domain: "Midnight", level: 4, name: "Stealth Expertise", type: "Ability", cost: "0", description: "When rolling with Fear to move unnoticed, mark Stress to roll with Hope." },
+    { domain: "Midnight", level: 4, name: "Glyph of Nightfall", type: "Spell", cost: "1 Hope", description: "Conjure glyph reducing target's Difficulty by Knowledge." },
+    { domain: "Midnight", level: 5, name: "Hush", type: "Spell", cost: "1 Hope", description: "Silence target and area within Very Close range." },
+    { domain: "Midnight", level: 5, name: "Phantom Retreat", type: "Spell", cost: "2 Hope", description: "Activate at location to teleport back later." },
+    { domain: "Midnight", level: 6, name: "Dark Whispers", type: "Spell", cost: "0", description: "Speak into mind of person you touched. Ask GM questions about them." },
+    { domain: "Midnight", level: 6, name: "Mass Disguise", type: "Spell", cost: "0", description: "Change appearance of all willing creatures within Close range." },
+    { domain: "Midnight", level: 7, name: "Midnight-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Midnight cards, gain Hope instead of GM Fear once per rest." },
+    { domain: "Midnight", level: 7, name: "Vanishing Dodge", type: "Spell", cost: "1 Hope", description: "When physical attack fails, become Hidden and teleport within Close range." },
+    { domain: "Midnight", level: 8, name: "Shadowhunter", type: "Ability", cost: "2 Hope", description: "In low light/darkness, gain +1 Evasion and advantage on attack rolls." },
+    { domain: "Midnight", level: 8, name: "Spellcharge", type: "Spell", cost: "1 Hope", description: "When taking magic damage, place tokens to add d6s to next damage roll." },
+    { domain: "Midnight", level: 9, name: "Night Terror", type: "Spell", cost: "2 Hope", description: "Targets perceive you as nightmarish horror, become Horrified and Vulnerable." },
+    { domain: "Midnight", level: 9, name: "Twilight Toll", type: "Ability", cost: "1 Hope", description: "Choose target. On successful rolls, place tokens to add d12s to damage." },
+    { domain: "Midnight", level: 10, name: "Eclipse", type: "Spell", cost: "2 Hope", description: "Plunge area into darkness only you and allies can see through." },
+    { domain: "Midnight", level: 10, name: "Specter of the Dark", type: "Spell", cost: "1 Hope", description: "Become Spectral: immune to physical damage, pass through objects." },
+    // Sage
+    { domain: "Sage", level: 1, name: "Gifted Tracker", type: "Ability", cost: "0", description: "When tracking creatures, spend Hope to ask GM questions. Gain +1 Evasion vs tracked." },
+    { domain: "Sage", level: 1, name: "Nature's Tongue", type: "Ability", cost: "0", description: "Speak language of natural world. Get info from plants and animals." },
+    { domain: "Sage", level: 1, name: "Vicious Entangle", type: "Spell", cost: "1 Hope", description: "Deal 1d8+1 physical damage and temporarily Restrain target." },
+    { domain: "Sage", level: 2, name: "Conjure Swarm", type: "Spell", cost: "1 Hope", description: "Conjure armored beetles to reduce damage or fireflies to deal 2d8+3 damage." },
+    { domain: "Sage", level: 2, name: "Natural Familiar", type: "Spell", cost: "1 Hope", description: "Summon small nature spirit or forest critter until next rest." },
+    { domain: "Sage", level: 3, name: "Corrosive Projectile", type: "Spell", cost: "1 Hope", description: "Deal d6+4 magic damage and mark target Corroded, reducing Difficulty." },
+    { domain: "Sage", level: 3, name: "Towering Stalk", type: "Spell", cost: "1 Hope", description: "Conjure climbable stalk up to Far range. Attack to drop targets." },
+    { domain: "Sage", level: 4, name: "Death Grip", type: "Spell", cost: "1 Hope", description: "Pull target or self into Melee range, constrict for 2 Stress." },
+    { domain: "Sage", level: 4, name: "Healing Field", type: "Spell", cost: "2 Hope", description: "Conjure healing plants in Close range to clear Hit Points." },
+    { domain: "Sage", level: 5, name: "Thorn Skin", type: "Spell", cost: "1 Hope", description: "Sprout thorns. Spend tokens to reduce damage and deal damage back." },
+    { domain: "Sage", level: 5, name: "Wild Fortress", type: "Spell", cost: "1 Hope", description: "Grow natural dome for cover with thresholds 15/30." },
+    { domain: "Sage", level: 6, name: "Conjured Steeds", type: "Spell", cost: "0", description: "Conjure magical steeds that double land speed." },
+    { domain: "Sage", level: 6, name: "Forager", type: "Ability", cost: "1 Hope", description: "Additional downtime move to forage random consumable." },
+    { domain: "Sage", level: 7, name: "Sage-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Sage cards, gain +2 Spellcast in natural environment." },
+    { domain: "Sage", level: 7, name: "Wild Surge", type: "Spell", cost: "2 Hope", description: "Mark Stress to channel nature, gain d6 bonus increasing until rest." },
+    { domain: "Sage", level: 8, name: "Forest Sprites", type: "Spell", cost: "2 Hope", description: "Create sprites that grant bonuses to allies' attacks and armor." },
+    { domain: "Sage", level: 8, name: "Rejuvenation Barrier", type: "Spell", cost: "1 Hope", description: "Create barrier that clears Hit Points and grants resistance." },
+    { domain: "Sage", level: 9, name: "Fane of the Wilds", type: "Ability", cost: "2 Hope", description: "After rest, place tokens equal to Sage cards to boost Spellcast Rolls." },
+    { domain: "Sage", level: 9, name: "Plant Dominion", type: "Spell", cost: "1 Hope", description: "Reshape plant life within Far range." },
+    { domain: "Sage", level: 10, name: "Force of Nature", type: "Spell", cost: "2 Hope", description: "Transform into nature spirit with bonuses to damage and armor." },
+    { domain: "Sage", level: 10, name: "Tempest", type: "Spell", cost: "2 Hope", description: "Unleash Blizzard, Hurricane, or Sandstorm on all targets within Far range." },
+    // Splendor
+    { domain: "Splendor", level: 1, name: "Bolt Beacon", type: "Spell", cost: "1 Hope", description: "Send bolt dealing d8+2 magic damage and making target Vulnerable." },
+    { domain: "Splendor", level: 1, name: "Mending Touch", type: "Spell", cost: "1 Hope", description: "Spend 2 Hope to clear Hit Point or Stress on a creature." },
+    { domain: "Splendor", level: 1, name: "Reassurance", type: "Ability", cost: "0", description: "After ally attempts roll but before consequences, let them reroll." },
+    { domain: "Splendor", level: 2, name: "Final Words", type: "Spell", cost: "1 Hope", description: "Infuse corpse with moment of life to answer questions truthfully." },
+    { domain: "Splendor", level: 2, name: "Healing Hands", type: "Spell", cost: "1 Hope", description: "Clear 2 Hit Points or Stress on target within Melee range." },
+    { domain: "Splendor", level: 3, name: "Second Wind", type: "Ability", cost: "2 Hope", description: "On successful attack, clear 3 Stress or Hit Point on self and allies." },
+    { domain: "Splendor", level: 3, name: "Voice of Reason", type: "Ability", cost: "1 Hope", description: "Advantage on rolls to de-escalate. Gain +1 Proficiency when all Stress marked." },
+    { domain: "Splendor", level: 4, name: "Divination", type: "Spell", cost: "1 Hope", description: "Spend 3 Hope to ask yes/no question about near future." },
+    { domain: "Splendor", level: 4, name: "Life Ward", type: "Spell", cost: "1 Hope", description: "Spend 3 Hope to mark ally with protection that saves from death move." },
+    { domain: "Splendor", level: 5, name: "Shape Material", type: "Spell", cost: "1 Hope", description: "Spend Hope to shape natural material within Close range." },
+    { domain: "Splendor", level: 5, name: "Smite", type: "Spell", cost: "2 Hope", description: "Spend 3 Hope to double damage on next weapon attack as magic damage." },
+    { domain: "Splendor", level: 6, name: "Restoration", type: "Spell", cost: "2 Hope", description: "After rest, place tokens to clear Hit Points/Stress or heal ailments." },
+    { domain: "Splendor", level: 6, name: "Zone of Protection", type: "Spell", cost: "2 Hope", description: "Create zone that reduces damage by d6 value, increasing until effect ends." },
+    { domain: "Splendor", level: 7, name: "Healing Strike", type: "Spell", cost: "1 Hope", description: "When dealing damage, spend 2 Hope to clear Hit Point on ally." },
+    { domain: "Splendor", level: 7, name: "Splendor-Touched", type: "Ability", cost: "2 Hope", description: "When 4+ Splendor cards, gain +3 Severe threshold." },
+    { domain: "Splendor", level: 8, name: "Shield Aura", type: "Spell", cost: "2 Hope", description: "Cast protective aura on target, reducing attack severity by additional threshold." },
+    { domain: "Splendor", level: 8, name: "Stunning Sunlight", type: "Spell", cost: "2 Hope", description: "Unleash rays dealing 3d20+3 or 4d20+5 magic damage and Stun targets." },
+    { domain: "Splendor", level: 9, name: "Overwhelming Aura", type: "Spell", cost: "2 Hope", description: "Empower aura, make Presence equal Spellcast, force adversaries to mark Stress." },
+    { domain: "Splendor", level: 9, name: "Salvation Beam", type: "Spell", cost: "2 Hope", description: "Target line of allies, clearing Hit Points equal to Stress marked." },
+    { domain: "Splendor", level: 10, name: "Invigoration", type: "Spell", cost: "3 Hope", description: "Spend Hope and roll d6s to refresh features with exhaustion limits." },
+    { domain: "Splendor", level: 10, name: "Resurrection", type: "Spell", cost: "2 Hope", description: "Restore creature dead no longer than 100 years to full strength." },
+    // Valor
+    { domain: "Valor", level: 1, name: "Bare Bones", type: "Ability", cost: "0", description: "When not equipping armor, base Armor Score is 3 + Strength." },
+    { domain: "Valor", level: 1, name: "Forceful Push", type: "Ability", cost: "0", description: "Attack with primary weapon to knock target back to Close range." },
+    { domain: "Valor", level: 1, name: "I Am Your Shield", type: "Ability", cost: "1 Hope", description: "When ally within Very Close would take damage, mark Stress to take instead." },
+    { domain: "Valor", level: 2, name: "Body Basher", type: "Ability", cost: "1 Hope", description: "On successful Melee attack, gain bonus to damage equal to Strength." },
+    { domain: "Valor", level: 2, name: "Bold Presence", type: "Ability", cost: "0", description: "Spend Hope to add Strength to Presence Roll. Avoid condition once per rest." },
+    { domain: "Valor", level: 3, name: "Critical Inspiration", type: "Ability", cost: "1 Hope", description: "On critical success, all allies within Very Close clear Stress or gain Hope." },
+    { domain: "Valor", level: 3, name: "Lean On Me", type: "Ability", cost: "1 Hope", description: "When consoling ally who failed roll, both clear 2 Stress." },
+    { domain: "Valor", level: 4, name: "Goad Them On", type: "Ability", cost: "1 Hope", description: "Taunt target. On success, target marks Stress and must target you." },
+    { domain: "Valor", level: 4, name: "Support Tank", type: "Ability", cost: "2 Hope", description: "When ally fails roll, spend 2 Hope to let them reroll Hope or Fear Die." },
+    { domain: "Valor", level: 5, name: "Armorer", type: "Ability", cost: "1 Hope", description: "While wearing armor, gain +1 Armor Score. Allies clear Armor Slot on rest." },
+    { domain: "Valor", level: 5, name: "Rousing Strike", type: "Ability", cost: "1 Hope", description: "On critical success, you and allies clear Hit Point or 1d4 Stress." },
+    { domain: "Valor", level: 6, name: "Inevitable", type: "Ability", cost: "1 Hope", description: "When you fail action roll, your next action roll has advantage." },
+    { domain: "Valor", level: 6, name: "Rise Up", type: "Ability", cost: "2 Hope", description: "Gain bonus to Severe threshold equal to Proficiency. Clear Stress when marking HP. "},
+    { domain: "Valor", level: 7, name: "Shrug It Off", type: "Ability", cost: "1 Hope", description: "Mark Stress to reduce damage severity by one threshold." },
+    { domain: "Valor", level: 7, name: "Valor-Touched", type: "Ability", cost: "1 Hope", description: "When 4+ Valor cards, gain +1 Armor Score." },
+    { domain: "Valor", level: 8, name: "Full Surge", type: "Ability", cost: "1 Hope", description: "Mark 3 Stress to gain +2 bonus to all traits until next rest." },
+    { domain: "Valor", level: 8, name: "Ground Pound", type: "Ability", cost: "2 Hope", description: "Spend 2 Hope to throw targets back dealing 4d10+8 damage." },
+    { domain: "Valor", level: 9, name: "Hold The Line", type: "Ability", cost: "1 Hope", description: "Take defensive stance. Adversaries moving within Very Close are pulled and Restrained." },
+    { domain: "Valor", level: 9, name: "Lead By Example", type: "Ability", cost: "3 Hope", description: "When dealing damage, mark Stress to let next PC clear Stress or gain Hope." },
+    { domain: "Valor", level: 10, name: "Unbreakable", type: "Ability", cost: "4 Hope", description: "When marking last Hit Point, roll d6 and clear that many HP instead of death move." },
+    { domain: "Valor", level: 10, name: "Unyielding Armor", type: "Ability", cost: "1 Hope", description: "When marking Armor Slot, roll d6s to potentially reduce severity without marking." }
 ];
 
 export const WEAPON_RANGES = ["Melee", "Very Close", "Close", "Far", "Very Far"];
@@ -223,7 +473,8 @@ export const INITIAL_CHARACTER: CharacterProfile = {
       level: 1,
       cost: "1 Hope",
       description: "Mark an enemy. Allies gain advantage when attacking that enemy until the start of your next turn.",
-      active: true
+      active: true,
+      isPreset: false
     },
     {
       id: "a2",
@@ -232,7 +483,8 @@ export const INITIAL_CHARACTER: CharacterProfile = {
       level: 2,
       cost: "2 Stress",
       description: "Attack all enemies within melee range. Mark 1 stress for each enemy targeted beyond the first.",
-      active: true
+      active: true,
+      isPreset: false
     }
   ],
   experiences: [
