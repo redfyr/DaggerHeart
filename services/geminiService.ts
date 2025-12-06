@@ -109,8 +109,12 @@ export const sendChatRuleQuery = async (query: string): Promise<string> => {
     User Question: "${query}"
     
     Instructions:
-    - Answer based on standard Daggerheart rules (Open Beta).
-    - Keep your answer under 120 tokens.
+    - Look up DaggerHeart core rules.
+    - Check the Character Sheet for Ancestry, Class, Subclass and Level.
+    - Answer based on standard Daggerheart rules and information in Character Sheet.
+    - Check sequence of ability checks, combat rules and dice rolling.
+    - Give advice on what the best next action is, if there is a next action required.
+    - Keep your answer under 200 tokens.
     - Be friendly but concise.
     `;
 
