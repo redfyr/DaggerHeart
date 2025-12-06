@@ -1595,7 +1595,7 @@ export default function App() {
                             </button>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); requestDeleteWeapon(w.id); }}
-                                className="text-slate-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="text-slate-600 hover:text-red-400 p-1 opacity-50 group-hover:opacity-100 transition-opacity"
                             >
                                 <TrashIcon />
                             </button>
@@ -1617,7 +1617,7 @@ export default function App() {
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {character.abilities.map(a => (
                     <div key={a.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors relative group">
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity z-10">
                              <button onClick={(e) => { e.stopPropagation(); requestDeleteAbility(a.id); }} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
                         </div>
                         <div className="cursor-pointer" onClick={() => handleAskAI(`Ability: ${a.name}`, a.description)}>
@@ -1716,7 +1716,7 @@ export default function App() {
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
                             {item}
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); requestDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
+                        <button onClick={(e) => { e.stopPropagation(); requestDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-50 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
                     </li>
                 ))}
             </ul>
