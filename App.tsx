@@ -246,7 +246,7 @@ function DraggableValue({
                 </button>
 
                 <div 
-                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative"
+                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative touch-none"
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
