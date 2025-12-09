@@ -1,5 +1,4 @@
 
-
 import { CharacterProfile, TraitType } from './types';
 
 export const STATIC_INFO: Record<string, { title: string; content: string }> = {
@@ -445,6 +444,9 @@ export const INITIAL_CHARACTER: CharacterProfile = {
   hope: 2,
   maxHope: 5,
   gold: 15,
+  handfuls: 0,
+  bags: 0,
+  chests: 0,
   weapons: [
     {
       id: "w1",
@@ -536,6 +538,9 @@ export const BLANK_CHARACTER: CharacterProfile = {
   hope: 0,
   maxHope: 2,
   gold: 0,
+  handfuls: 0,
+  bags: 0,
+  chests: 0,
   weapons: [],
   abilities: [],
   experiences: [],
