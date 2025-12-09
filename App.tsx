@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { INITIAL_CHARACTER, BLANK_CHARACTER, DAGGERHEART_RULES, STATIC_INFO, COMMON_ITEMS, EXAMPLE_EXPERIENCES, CLASS_DOMAINS, WEAPON_RANGES, DOMAIN_RESOURCES, ALL_DOMAIN_CARDS, DomainCardData, DOMAIN_DESCRIPTIONS } from './constants';
 import { CharacterProfile, TraitType, RollResult, Weapon, AbilityCard, Experience } from './types';
@@ -18,10 +17,18 @@ const PlusIcon = () => <i className="fa-solid fa-plus text-sm" />;
 const FilePlusIcon = () => <i className="fa-solid fa-file-circle-plus text-lg" />;
 const CloseIcon = () => <i className="fa-solid fa-xmark text-xl" />;
 const BackIcon = () => <i className="fa-solid fa-arrow-left text-lg" />;
-const SwordIcon = () => <i className="fa-solid fa-khanda text-base" />; // Khanda looks sufficiently like a fantasy sword
+const SwordIcon = () => <i className="fa-solid fa-khanda text-base" />;
 const SearchIcon = () => <i className="fa-solid fa-magnifying-glass text-sm" />;
 const CommentIcon = () => <i className="fa-solid fa-comment-dots text-2xl" />;
 const PaperPlaneIcon = () => <i className="fa-solid fa-paper-plane text-sm" />;
+const ChevronDownIcon = () => <i className="fa-solid fa-chevron-down text-sm" />;
+const ChevronUpIcon = () => <i className="fa-solid fa-chevron-up text-sm" />;
+
+// Section Icons
+const IdCardIcon = () => <i className="fa-solid fa-id-card text-lg" />;
+const PersonRunningIcon = () => <i className="fa-solid fa-person-running text-lg" />;
+const HeartPulseIcon = () => <i className="fa-solid fa-heart-pulse text-lg" />;
+const ScrollIcon = () => <i className="fa-solid fa-scroll text-lg" />;
 
 // Currency Icons
 const ChestIcon = () => (
@@ -76,27 +83,23 @@ const generateSimpleId = () => {
 function SmartAvatar({ ancestry, className, level }: { ancestry: string, className?: string, level?: number }) {
     const url = getAvatarUrl(ancestry);
     const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
-    
-    // If the url prop is different from the loadedUrl, we are loading
     const isLoading = url !== loadedUrl;
 
     return (
          <div className={`relative shrink-0 ${className} overflow-hidden bg-slate-800`}>
             <img 
-                key={url} // Reset DOM node on url change
+                key={url} 
                 src={url} 
                 alt={ancestry}
                 className="w-full h-full object-cover"
-                onLoad={() => setLoadedUrl(url)} // Mark this specific URL as loaded
-                onError={() => setLoadedUrl(url)} // Stop loading on error
+                onLoad={() => setLoadedUrl(url)} 
+                onError={() => setLoadedUrl(url)} 
             />
             {isLoading && (
                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-300">
                     <div className="animate-spin rounded-full h-1/3 w-1/3 border-2 border-t-transparent border-dagger-gold opacity-90"></div>
                 </div>
             )}
-            
-            {/* Level Badge (Roman Numeral) - Centered Bottom */}
             {level !== undefined && (
                 <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-dagger-gold/60 px-2 py-0.5 rounded shadow-lg shadow-black z-30 min-w-[1.5rem] text-center">
                     <span className="text-dagger-gold font-serif font-bold text-[10px] leading-none tracking-wider block">
@@ -141,7 +144,6 @@ const MarkdownText = ({ content }: { content: string }) => {
         if (trimmed.startsWith('# ')) {
              return <h2 key={i} className="text-white font-serif font-bold text-xl mt-5 mb-3">{parseInline(trimmed.slice(2))}</h2>;
         }
-
         if (trimmed.match(/^[*•-]\s/)) {
              return (
                 <div key={i} className="flex items-start gap-2 pl-2">
@@ -150,7 +152,6 @@ const MarkdownText = ({ content }: { content: string }) => {
                 </div>
               );
         }
-
         if (trimmed.match(/^\d+\.\s/)) {
             const match = trimmed.match(/^(\d+)\.\s/);
             const num = match ? match[1] : '';
@@ -161,7 +162,6 @@ const MarkdownText = ({ content }: { content: string }) => {
                 </div>
             );
         }
-
         return <div key={i}>{parseInline(line)}</div>;
       })}
     </div>
@@ -169,61 +169,98 @@ const MarkdownText = ({ content }: { content: string }) => {
 };
 
 // --- Draggable Value Component ---
-function DraggableValue({ 
+interface DraggableValueProps {
+    value: number; 
+    onChange: (val: number) => void; 
+    label: string;
+    min?: number;
+    max?: number;
+    loop?: number;
+}
+
+const DraggableValue: React.FC<DraggableValueProps> = ({ 
     value, 
     onChange, 
     label,
     min = 0,
     max = 9999,
     loop
-}: { 
-    value: number, 
-    onChange: (val: number) => void, 
-    label: string,
-    min?: number,
-    max?: number,
-    loop?: number
-}) {
-    const startY = useRef(0);
-    const startVal = useRef(0);
+}) => {
+    const accumulator = useRef(0);
+    const lastY = useRef(0);
+    const isDragging = useRef(false);
+    const valueRef = useRef(value);
+
+    // Keep ref in sync so the event listeners always see the fresh value
+    useEffect(() => { valueRef.current = value; }, [value]);
+
+    const handleStart = (clientY: number) => {
+        isDragging.current = true;
+        lastY.current = clientY;
+        accumulator.current = 0;
+        document.body.style.cursor = 'grab';
+        document.body.style.overflow = 'hidden'; // Prevent scrolling on mobile
+        
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleEnd);
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+    };
+
+    const handleMove = (clientY: number) => {
+        if (!isDragging.current) return;
+        
+        const delta = clientY - lastY.current; 
+        lastY.current = clientY;
+        accumulator.current += delta;
+
+        const threshold = 30; // Pixels per step
+
+        // Standard Scroll Wheel Logic: Dragging DOWN (Positive) adds value?
+        // Matches "pulling lever down".
+        if (Math.abs(accumulator.current) >= threshold) {
+            const steps = Math.floor(accumulator.current / threshold);
+            accumulator.current -= (steps * threshold);
+
+            let newVal = valueRef.current + steps;
+            
+            if (loop) {
+                 newVal = ((newVal % loop) + loop) % loop;
+            } else {
+                newVal = Math.min(max, Math.max(min, newVal));
+            }
+
+            if (newVal !== valueRef.current) {
+                onChange(newVal);
+            }
+        }
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
-        startY.current = e.clientY;
-        startVal.current = value;
-        document.body.style.cursor = 'grab';
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-        const delta = e.clientY - startY.current;
-        const steps = Math.floor(delta / 30);
-        
-        const newVal = Math.min(max, Math.max(min, startVal.current + steps));
-        if (newVal !== value) onChange(newVal);
-    };
-
-    const handleMouseUp = () => {
-        document.body.style.cursor = 'default';
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        handleStart(e.clientY);
     };
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        startY.current = e.touches[0].clientY;
-        startVal.current = value;
-        document.body.style.overflow = 'hidden';
+        handleStart(e.touches[0].clientY);
     };
 
-    const handleTouchMove = (e: React.TouchEvent) => {
-        const delta = e.touches[0].clientY - startY.current;
-        const steps = Math.floor(delta / 30);
-        const newVal = Math.min(max, Math.max(min, startVal.current + steps));
-        if (newVal !== value) onChange(newVal);
+    const handleMouseMove = (e: MouseEvent) => {
+        handleMove(e.clientY);
     };
 
-    const handleTouchEnd = () => {
+    const handleTouchMove = (e: TouchEvent) => {
+        if (e.cancelable) e.preventDefault(); 
+        handleMove(e.touches[0].clientY);
+    };
+
+    const handleEnd = () => {
+        isDragging.current = false;
+        document.body.style.cursor = '';
         document.body.style.overflow = '';
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleEnd);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleEnd);
     };
 
     const nextVal = loop ? (value + 1) % loop : value + 1;
@@ -233,46 +270,44 @@ function DraggableValue({
     const showPrev = loop ? true : prevVal >= min;
 
     return (
-        <div className="flex flex-col items-center select-none">
-            <label className="text-[13px] text-slate-300 uppercase font-bold mb-1 tracking-wider">{label}</label>
-            <div className="flex items-center gap-1 bg-slate-900 rounded-xl p-1 border border-slate-700 w-full justify-between h-24 relative overflow-hidden group hover:border-slate-500 transition-colors">
+        <div className="flex flex-col items-center select-none w-full">
+            <label className="text-[10px] sm:text-xs text-slate-400 uppercase font-bold mb-1 tracking-wider">{label}</label>
+            <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700 w-full justify-between h-20 sm:h-24 relative overflow-hidden group hover:border-slate-500 transition-colors">
                  
                  <button 
                     onClick={() => onChange(Math.max(min, value - 1))} 
                     disabled={!loop && value <= min}
-                    className="z-20 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed"
+                    className="z-20 w-6 sm:w-8 h-6 sm:h-8 flex items-center justify-center text-slate-500 hover:text-white bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed"
                 >
                     <i className="fa-solid fa-minus text-xs" />
                 </button>
 
                 <div 
-                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative touch-none"
+                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative"
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
                 >
-                    <div className="absolute top-0 w-full h-6 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
-                    <div className="absolute bottom-0 w-full h-6 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
+                    <div className="absolute top-0 w-full h-4 sm:h-6 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
+                    <div className="absolute bottom-0 w-full h-4 sm:h-6 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
 
                     <div className="flex flex-col items-center justify-center gap-0 w-full">
-                         <div className={`text-lg font-bold text-slate-600 opacity-40 translate-y-1 ${!showNext ? 'invisible' : ''}`}>{nextVal}</div> 
-                         <div className="text-4xl font-bold text-slate-100 py-0 z-0 scale-110">{value}</div>
-                         <div className={`text-lg font-bold text-slate-600 opacity-40 -translate-y-1 ${!showPrev ? 'invisible' : ''}`}>{prevVal}</div>
+                         <div className={`text-base font-bold text-slate-600 opacity-40 translate-y-1 ${!showNext ? 'invisible' : ''}`}>{nextVal}</div> 
+                         <div className="text-2xl sm:text-4xl font-bold text-slate-100 py-0 z-0 scale-110">{value}</div>
+                         <div className={`text-base font-bold text-slate-600 opacity-40 -translate-y-1 ${!showPrev ? 'invisible' : ''}`}>{prevVal}</div>
                     </div>
                 </div>
 
                 <button 
                     onClick={() => onChange(Math.min(max, value + 1))} 
                     disabled={!loop && value >= max}
-                    className="z-20 w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed"
+                    className="z-20 w-6 sm:w-8 h-6 sm:h-8 flex items-center justify-center text-slate-500 hover:text-white bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed"
                 >
                     <i className="fa-solid fa-plus text-xs" />
                 </button>
             </div>
         </div>
     );
-}
+};
 
 // --- Chat Widget Component ---
 function ChatWidget() {
@@ -310,7 +345,7 @@ function ChatWidget() {
         return (
             <button 
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-24 w-12 h-12 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-dagger-gold rounded-full shadow-xl flex items-center justify-center transition-all z-40 hover:scale-110 active:scale-95"
+                className="fixed bottom-4 right-4 w-12 h-12 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-dagger-gold rounded-full shadow-xl flex items-center justify-center transition-all z-40 hover:scale-110 active:scale-95"
                 title="Ask Rules Bot"
             >
                 <CommentIcon />
@@ -319,7 +354,7 @@ function ChatWidget() {
     }
 
     return (
-        <div className="fixed bottom-24 right-6 w-80 h-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-20 right-4 w-72 sm:w-80 h-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5">
             {/* Header */}
             <div className="p-3 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
                 <h3 className="font-bold text-dagger-gold text-sm flex items-center gap-2">
@@ -372,6 +407,81 @@ function ChatWidget() {
         </div>
     );
 }
+
+// --- Accordion Section Component ---
+interface AccordionSectionProps {
+    id: string; 
+    title: React.ReactNode; 
+    icon: React.ReactNode; 
+    activeSection: string | null; 
+    onToggle: (id: string) => void;
+    children: React.ReactNode;
+    summary?: React.ReactNode;
+}
+
+const AccordionSection: React.FC<AccordionSectionProps> = ({ 
+    id, 
+    title, 
+    icon, 
+    activeSection, 
+    onToggle, 
+    children,
+    summary
+}) => {
+    const isOpen = activeSection === id;
+
+    return (
+        <div 
+            className={`w-full transition-all duration-300 ease-in-out border-slate-700 overflow-hidden relative shadow-lg
+                ${isOpen ? 'my-2 rounded-lg border-2 border-dagger-gold/50 bg-slate-800 z-10' : 'my-1 rounded-md border bg-slate-800/60 hover:bg-slate-700/80 hover:border-slate-500'}
+            `}
+            style={{
+                clipPath: isOpen ? 'none' : 'polygon(0 0, 100% 0, 100% 85%, 98% 100%, 0 100%)' // Subtle cutout for closed cards
+            }}
+        >
+            {/* Header / Mask */}
+            <div 
+                onClick={() => onToggle(id)}
+                className={`flex items-center justify-between p-3 sm:p-4 cursor-pointer transition-colors
+                    ${isOpen ? 'bg-slate-900 border-b border-slate-700' : 'bg-transparent'}
+                `}
+            >
+                <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+                     {/* Icon Box */}
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded bg-slate-900 border border-slate-700 shadow-inner flex-shrink-0 transition-colors ${isOpen ? 'text-dagger-gold border-dagger-gold' : 'text-slate-400'}`}>
+                        {icon}
+                    </div>
+                    
+                    {/* Title & Summary */}
+                    <div className="flex flex-col min-w-0">
+                        <h2 className={`font-serif font-bold tracking-wider text-sm sm:text-base truncate transition-colors ${isOpen ? 'text-dagger-gold' : 'text-slate-200'}`}>
+                            {title}
+                        </h2>
+                        {!isOpen && summary && (
+                            <div className="text-xs text-slate-400 truncate mt-0.5">{summary}</div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Arrow */}
+                <div className={`text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                    <ChevronDownIcon />
+                </div>
+            </div>
+
+            {/* Content Body */}
+            <div 
+                className={`transition-all duration-300 ease-in-out bg-slate-900/40
+                    ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
+                `}
+            >
+                <div className="p-3 sm:p-4">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL COMPONENTS ---
 
@@ -431,11 +541,11 @@ const EditCharacterModal = ({ character, onSave, onClose }: { character: Charact
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-600 shadow-2xl flex flex-col max-h-[90vh]">
                 <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-                    <h3 className="font-bold text-white text-lg">Edit Character Sheet</h3>
+                    <h3 className="font-bold text-white text-lg">Edit Profile</h3>
                     <button onClick={onClose}><CloseIcon /></button>
                 </div>
                 <div className="p-6 overflow-y-auto dagger-scroll space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-lg text-slate-400 uppercase font-bold mb-1">Name</label>
                             <input type="text" value={formData.name} onChange={e => handleChange('name', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white" />
@@ -462,7 +572,7 @@ const EditCharacterModal = ({ character, onSave, onClose }: { character: Charact
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-lg text-slate-400 uppercase font-bold mb-1">Class</label>
                             <select value={formData.class} onChange={e => handleChange('class', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white">
@@ -477,7 +587,7 @@ const EditCharacterModal = ({ character, onSave, onClose }: { character: Charact
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-lg text-slate-400 uppercase font-bold mb-1">Ancestry</label>
                             <div className="flex items-center gap-3">
@@ -494,10 +604,10 @@ const EditCharacterModal = ({ character, onSave, onClose }: { character: Charact
                             </select>
                         </div>
                     </div>
-
+                    
                     <div>
-                        <h4 className="text-sm font-bold text-slate-400 mb-4 border-b border-slate-700 pb-1">Traits</h4>
-                        <div className="grid grid-cols-2 gap-6">
+                         <h4 className="text-sm font-bold text-slate-400 mb-4 border-b border-slate-700 pb-1">Traits</h4>
+                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                             {formData.traits.map((t, i) => (
                                 <DraggableValue 
                                     key={t.name}
@@ -519,17 +629,16 @@ const EditCharacterModal = ({ character, onSave, onClose }: { character: Charact
                              <NumberStepper label="Max Stress" value={formData.maxStress} onChange={v => handleChange('maxStress', v)} />
                              <NumberStepper label="Max Hope" value={formData.maxHope} onChange={v => handleChange('maxHope', v)} />
                         </div>
-                        <div className="grid grid-cols-3 gap-4 mt-4">
-                             <NumberStepper label="Minor Threshold" value={formData.minorThreshold} onChange={v => handleChange('minorThreshold', v)} />
-                             <NumberStepper label="Major Threshold" value={formData.majorThreshold} onChange={v => handleChange('majorThreshold', v)} />
-                             <NumberStepper label="Severe Threshold" value={formData.severeThreshold} onChange={v => handleChange('severeThreshold', v)} />
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                             <NumberStepper label="1st Threshold" value={formData.minorThreshold} onChange={v => handleChange('minorThreshold', v)} />
+                             <NumberStepper label="2nd Threshold" value={formData.majorThreshold} onChange={v => handleChange('majorThreshold', v)} />
                         </div>
                     </div>
 
                 </div>
                 <div className="p-4 border-t border-slate-700 flex justify-end gap-2 bg-slate-900/50">
                      <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                     <button onClick={() => onSave(formData)} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded hover:bg-yellow-400">Save Profile</button>
+                     <button onClick={() => onSave(formData)} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded hover:bg-yellow-400">Save</button>
                 </div>
             </div>
         </div>
@@ -548,7 +657,7 @@ const AddWeaponModal = ({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 space-y-4">
+            <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                 <h3 className="font-bold text-white text-lg mb-4">Add Weapon</h3>
                 
                 <div className="mb-4">
@@ -597,7 +706,7 @@ const AddWeaponModal = ({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
 
                 <div className="flex justify-end gap-2 pt-2">
                     <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add Weapon</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add</button>
                 </div>
             </div>
         </div>
@@ -605,20 +714,14 @@ const AddWeaponModal = ({ onSave, onClose }: { onSave: (w: Weapon) => void, onCl
 };
 
 const AddAbilityModal = ({ character, onSave, onClose }: { character: CharacterProfile, onSave: (a: AbilityCard) => void, onClose: () => void }) => {
-    // Mode: CHOICE (start), PRESET (official cards), CUSTOM (manual entry)
     const [mode, setMode] = useState<'CHOICE' | 'PRESET' | 'CUSTOM'>('CHOICE');
-
-    // Preset State
     const [filterDomain, setFilterDomain] = useState<string>(CLASS_DOMAINS[character.class]?.[0] || DAGGERHEART_RULES.domains[0]);
     const [filterLevel, setFilterLevel] = useState<number>(character.level);
     const [selectedCard, setSelectedCard] = useState<DomainCardData | null>(null);
-
-    // Custom State
     const [customAbility, setCustomAbility] = useState<Partial<AbilityCard>>({
         name: "", domain: CLASS_DOMAINS[character.class]?.[0] || "Blade", cost: "1 Hope", description: "", level: 1, active: true, type: "Ability", isPreset: false
     });
 
-    // Helper to get matching cards
     const filteredCards = ALL_DOMAIN_CARDS.filter(c => 
         c.domain === filterDomain && c.level <= filterLevel
     ).sort((a, b) => a.level - b.level);
@@ -634,7 +737,7 @@ const AddAbilityModal = ({ character, onSave, onClose }: { character: CharacterP
             description: selectedCard.description,
             type: selectedCard.type,
             active: true,
-            isPreset: true // Locks editing
+            isPreset: true
         });
     };
 
@@ -643,33 +746,31 @@ const AddAbilityModal = ({ character, onSave, onClose }: { character: CharacterP
         onSave({ ...customAbility, id: generateSimpleId(), isPreset: false } as AbilityCard);
     };
 
-    // --- RENDERERS ---
-
     const renderChoiceScreen = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+        <div className="grid grid-cols-1 gap-4 p-4">
              <button 
                 onClick={() => setMode('PRESET')}
-                className="flex flex-col items-center justify-center p-8 bg-slate-700/50 hover:bg-slate-700 border-2 border-slate-600 hover:border-dagger-gold rounded-xl transition-all group gap-4"
+                className="flex items-center p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl transition-all group gap-4"
              >
-                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-dagger-gold text-2xl group-hover:scale-110 transition-transform shadow-lg">
+                <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-dagger-gold text-xl shadow-lg">
                     <SearchIcon />
                 </div>
-                <div className="text-center">
-                    <h4 className="text-xl font-bold text-white mb-1">Domain Cards</h4>
-                    <p className="text-sm text-slate-400">Choose from the official Daggerheart domain decks.</p>
+                <div className="text-left">
+                    <h4 className="font-bold text-white mb-1">Domain Cards</h4>
+                    <p className="text-xs text-slate-400">Official Daggerheart domain decks.</p>
                 </div>
              </button>
 
              <button 
                 onClick={() => setMode('CUSTOM')}
-                className="flex flex-col items-center justify-center p-8 bg-slate-700/50 hover:bg-slate-700 border-2 border-slate-600 hover:border-sky-400 rounded-xl transition-all group gap-4"
+                className="flex items-center p-4 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl transition-all group gap-4"
              >
-                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-sky-400 text-2xl group-hover:scale-110 transition-transform shadow-lg">
+                <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-sky-400 text-xl shadow-lg">
                     <EditIcon />
                 </div>
-                <div className="text-center">
-                    <h4 className="text-xl font-bold text-white mb-1">Custom Ability</h4>
-                    <p className="text-sm text-slate-400">Create your own homebrew ability or spell.</p>
+                <div className="text-left">
+                    <h4 className="font-bold text-white mb-1">Custom Ability</h4>
+                    <p className="text-xs text-slate-400">Create homebrew ability.</p>
                 </div>
              </button>
         </div>
@@ -677,154 +778,78 @@ const AddAbilityModal = ({ character, onSave, onClose }: { character: CharacterP
 
     const renderPresetScreen = () => (
         <div className="flex flex-col h-full overflow-hidden">
-             {/* Filters */}
-             <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Domain</label>
-                    <select 
-                        value={filterDomain} 
-                        onChange={e => setFilterDomain(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
-                    >
-                         {/* Show Class Domains first */}
-                         <optgroup label="Class Domains">
-                            {CLASS_DOMAINS[character.class]?.map(d => <option key={d} value={d}>{d}</option>)}
-                         </optgroup>
-                         <optgroup label="All Domains">
-                            {DAGGERHEART_RULES.domains.filter(d => !CLASS_DOMAINS[character.class]?.includes(d)).map(d => (
-                                <option key={d} value={d}>{d}</option>
-                            ))}
-                         </optgroup>
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-xs text-slate-500 uppercase font-bold mb-1">Max Level</label>
-                    <select 
-                        value={filterLevel} 
-                        onChange={e => setFilterLevel(parseInt(e.target.value))}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
-                    >
-                        {Array.from({length: 10}).map((_, i) => (
-                            <option key={i+1} value={i+1}>Level {i+1}</option>
-                        ))}
-                    </select>
-                </div>
+             <div className="grid grid-cols-2 gap-2 mb-4">
+                <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+                     <optgroup label="Class Domains">{CLASS_DOMAINS[character.class]?.map(d => <option key={d} value={d}>{d}</option>)}</optgroup>
+                     <optgroup label="All Domains">{DAGGERHEART_RULES.domains.filter(d => !CLASS_DOMAINS[character.class]?.includes(d)).map(d => <option key={d} value={d}>{d}</option>)}</optgroup>
+                </select>
+                <select value={filterLevel} onChange={e => setFilterLevel(parseInt(e.target.value))} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
+                    {Array.from({length: 10}).map((_, i) => <option key={i+1} value={i+1}>Level {i+1}</option>)}
+                </select>
              </div>
 
-             {/* Content Area: List + Preview */}
-             <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 gap-4">
-                 
-                 {/* List */}
-                 <div className="overflow-y-auto dagger-scroll bg-slate-900/50 rounded-lg border border-slate-700 p-2 space-y-2">
-                    {filteredCards.length === 0 && (
-                        <div className="text-center p-4 text-slate-500 italic">No cards found for this selection.</div>
-                    )}
+             <div className="flex-1 overflow-hidden grid grid-cols-1 gap-4">
+                 <div className="overflow-y-auto dagger-scroll bg-slate-900/50 rounded-lg border border-slate-700 p-2 space-y-2 max-h-40 sm:max-h-60">
+                    {filteredCards.length === 0 && <div className="text-center p-4 text-slate-500 italic text-xs">No cards found.</div>}
                     {filteredCards.map(c => (
-                        <div 
-                            key={c.name}
-                            onClick={() => setSelectedCard(c)}
-                            className={`p-3 rounded border cursor-pointer transition-all ${selectedCard?.name === c.name ? 'bg-slate-700 border-dagger-gold shadow-lg' : 'bg-slate-800 border-slate-700 hover:bg-slate-750'}`}
-                        >
+                        <div key={c.name} onClick={() => setSelectedCard(c)} className={`p-2 rounded border cursor-pointer ${selectedCard?.name === c.name ? 'bg-slate-700 border-dagger-gold' : 'bg-slate-800 border-slate-700'}`}>
                             <div className="flex justify-between items-start">
-                                <span className="font-bold text-slate-200 text-sm">{c.name}</span>
-                                <span className="text-[10px] bg-slate-900 px-1.5 py-0.5 rounded text-slate-400">Lvl {c.level}</span>
-                            </div>
-                            <div className="flex justify-between mt-1 text-xs text-slate-500">
-                                <span>{c.type}</span>
-                                <span>{c.cost}</span>
+                                <span className="font-bold text-slate-200 text-xs">{c.name}</span>
+                                <span className="text-[10px] bg-slate-900 px-1 rounded text-slate-400">Lvl {c.level}</span>
                             </div>
                         </div>
                     ))}
                  </div>
 
-                 {/* Preview */}
-                 <div className="bg-slate-800 border border-slate-600 rounded-lg p-4 flex flex-col relative">
-                    {!selectedCard ? (
-                        <div className="flex-1 flex items-center justify-center text-slate-500 italic text-sm text-center">
-                            Select a card from the list to preview.
+                 {selectedCard && (
+                     <div className="bg-slate-800 border border-slate-600 rounded-lg p-3 flex flex-col relative flex-1">
+                        <div className="border-b border-slate-600 pb-2 mb-2">
+                            <h3 className="font-bold text-lg text-white font-serif">{selectedCard.name}</h3>
+                            <div className="flex flex-wrap gap-2 text-[10px] text-dagger-gold font-bold uppercase">
+                                <span>{selectedCard.domain}</span><span>•</span><span>{selectedCard.type}</span><span>•</span><span>{selectedCard.cost}</span>
+                            </div>
                         </div>
-                    ) : (
-                        <>
-                            <div className="border-b border-slate-600 pb-3 mb-3">
-                                <div className="flex justify-between items-start mb-1">
-                                    <h3 className="font-bold text-xl text-white font-serif">{selectedCard.name}</h3>
-                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${DOMAIN_RESOURCES[selectedCard.domain]?.colorBg || 'bg-slate-600'} text-white shadow-sm`}>
-                                        {selectedCard.domain}
-                                    </span>
-                                </div>
-                                <div className="flex gap-3 text-xs text-dagger-gold font-bold uppercase tracking-wider">
-                                    <span>Level {selectedCard.level}</span>
-                                    <span>•</span>
-                                    <span>{selectedCard.type}</span>
-                                    <span>•</span>
-                                    <span>{selectedCard.cost}</span>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto dagger-scroll text-sm text-slate-300 leading-relaxed">
-                                {selectedCard.description}
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-slate-700">
-                                <button 
-                                    onClick={handleSavePreset}
-                                    className="w-full py-2 bg-dagger-gold hover:bg-yellow-400 text-slate-900 font-bold rounded shadow transition-colors"
-                                >
-                                    Add Ability
-                                </button>
-                            </div>
-                        </>
-                    )}
-                 </div>
+                        <div className="flex-1 overflow-y-auto dagger-scroll text-xs text-slate-300 leading-relaxed mb-2">
+                            {selectedCard.description}
+                        </div>
+                        <button onClick={handleSavePreset} className="w-full py-2 bg-dagger-gold text-slate-900 font-bold rounded text-sm">Add Ability</button>
+                     </div>
+                 )}
              </div>
         </div>
     );
 
     const renderCustomScreen = () => (
         <div className="flex flex-col h-full overflow-y-auto dagger-scroll p-1">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-                 <input placeholder="Name" value={customAbility.name} onChange={e => setCustomAbility({...customAbility, name: e.target.value})} className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white" />
-                 
-                 <select value={customAbility.domain} onChange={e => setCustomAbility({...customAbility, domain: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white">
+            <div className="grid grid-cols-2 gap-2 mb-4">
+                 <input placeholder="Name" value={customAbility.name} onChange={e => setCustomAbility({...customAbility, name: e.target.value})} className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+                 <select value={customAbility.domain} onChange={e => setCustomAbility({...customAbility, domain: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm">
                     {DAGGERHEART_RULES.domains.map(d => <option key={d} value={d}>{d}</option>)}
                  </select>
-                 
-                 <input placeholder="Level" type="number" value={customAbility.level} onChange={e => setCustomAbility({...customAbility, level: parseInt(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white" />
-
-                 <input placeholder="Type (e.g. Spell)" value={customAbility.type} onChange={e => setCustomAbility({...customAbility, type: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white" />
-                 
-                 <input placeholder="Cost (e.g. 1 Hope)" value={customAbility.cost} onChange={e => setCustomAbility({...customAbility, cost: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white" />
+                 <input placeholder="Level" type="number" value={customAbility.level} onChange={e => setCustomAbility({...customAbility, level: parseInt(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+                 <input placeholder="Type" value={customAbility.type} onChange={e => setCustomAbility({...customAbility, type: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
+                 <input placeholder="Cost" value={customAbility.cost} onChange={e => setCustomAbility({...customAbility, cost: e.target.value})} className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-sm" />
             </div>
-            
-            <textarea placeholder="Description" value={customAbility.description} onChange={e => setCustomAbility({...customAbility, description: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white h-32 mb-4" />
-
+            <textarea placeholder="Description" value={customAbility.description} onChange={e => setCustomAbility({...customAbility, description: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white h-24 mb-4 text-sm" />
             <div className="mt-auto flex justify-end">
-                <button onClick={handleSaveCustom} className="px-6 py-2 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded shadow transition-colors">
-                    Create Custom Ability
-                </button>
+                <button onClick={handleSaveCustom} className="px-4 py-2 bg-sky-500 text-white font-bold rounded text-sm">Create</button>
             </div>
         </div>
     );
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-600 shadow-2xl flex flex-col h-[600px] max-h-[90vh]">
-                
-                {/* Header */}
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
-                    <div className="flex items-center gap-3">
-                        {mode !== 'CHOICE' && (
-                            <button onClick={() => setMode('CHOICE')} className="text-slate-400 hover:text-white transition-colors">
-                                <BackIcon />
-                            </button>
-                        )}
-                        <h3 className="font-bold text-white text-lg">
-                            {mode === 'CHOICE' ? 'Add Ability' : (mode === 'PRESET' ? 'Select Domain Card' : 'Create Custom Ability')}
+            <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl flex flex-col h-[500px] max-h-[90vh]">
+                <div className="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+                    <div className="flex items-center gap-2">
+                        {mode !== 'CHOICE' && <button onClick={() => setMode('CHOICE')}><BackIcon /></button>}
+                        <h3 className="font-bold text-white text-base">
+                            {mode === 'CHOICE' ? 'Add Ability' : (mode === 'PRESET' ? 'Select Card' : 'Custom Ability')}
                         </h3>
                     </div>
                     <button onClick={onClose}><CloseIcon /></button>
                 </div>
-
-                {/* Body */}
-                <div className="flex-1 p-6 overflow-hidden">
+                <div className="flex-1 p-4 overflow-hidden">
                     {mode === 'CHOICE' && renderChoiceScreen()}
                     {mode === 'PRESET' && renderPresetScreen()}
                     {mode === 'CUSTOM' && renderCustomScreen()}
@@ -834,10 +859,8 @@ const AddAbilityModal = ({ character, onSave, onClose }: { character: CharacterP
     );
 };
 
-const AddExperienceModal = ({ onSave, onClose }: { onSave: (e: Experience) => void, onClose: () => void }) => {
-    const [exp, setExp] = useState<Partial<Experience>>({
-        name: "", value: 2, description: ""
-    });
+const AddExperienceModal = ({ onSave, onClose }: { onSave: (exp: Experience) => void, onClose: () => void }) => {
+    const [exp, setExp] = useState<Partial<Experience>>({ name: "", value: 2, description: "" });
 
     const handleSave = () => {
         if (!exp.name) return;
@@ -846,43 +869,19 @@ const AddExperienceModal = ({ onSave, onClose }: { onSave: (e: Experience) => vo
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-4">
-                <h3 className="font-bold text-white text-lg mb-4">Add Experience</h3>
-                
+            <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl p-6 space-y-4">
+                <h3 className="font-bold text-white text-lg">Add Experience</h3>
                 <div className="space-y-3">
-                     <input placeholder="Name (e.g. Ex-Soldier)" value={exp.name} onChange={e => setExp({...exp, name: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white" />
-                     
-                     <div className="flex items-center gap-4">
-                        <label className="text-slate-400 text-sm">Bonus Value:</label>
-                        <div className="flex gap-2">
-                             {[1, 2, 3].map(v => (
-                                 <button 
-                                    key={v}
-                                    onClick={() => setExp({...exp, value: v})}
-                                    className={`w-10 h-10 rounded border ${exp.value === v ? 'bg-dagger-hope border-dagger-hope text-black font-bold' : 'bg-slate-900 border-slate-700 text-slate-400'}`}
-                                 >
-                                    +{v}
-                                 </button>
-                             ))}
-                        </div>
-                     </div>
-
-                     <textarea placeholder="Description" value={exp.description} onChange={e => setExp({...exp, description: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white h-20" />
-                </div>
-                
-                {/* Suggestions */}
-                <div className="mt-4">
-                    <p className="text-xs text-slate-500 uppercase font-bold mb-2">Suggestions</p>
-                    <div className="flex flex-wrap gap-2">
-                        {EXAMPLE_EXPERIENCES.Background.slice(0, 5).map(ex => (
-                            <button key={ex} onClick={() => setExp(prev => ({...prev, name: ex}))} className="text-xs px-2 py-1 bg-slate-700 rounded text-slate-300 hover:text-white">{ex}</button>
-                        ))}
+                    <input placeholder="Name (e.g. Ex-Soldier)" value={exp.name} onChange={e => setExp({...exp, name: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white" />
+                    <div className="flex items-center gap-2">
+                         <label className="text-slate-400 text-sm">Value:</label>
+                         <input type="number" value={exp.value} onChange={e => setExp({...exp, value: parseInt(e.target.value)})} className="w-20 bg-slate-900 border border-slate-700 rounded p-2 text-white" />
                     </div>
+                    <textarea placeholder="Description" value={exp.description} onChange={e => setExp({...exp, description: e.target.value})} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white h-24" />
                 </div>
-
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex justify-end gap-2">
                     <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                    <button onClick={handleSave} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add Experience</button>
+                    <button onClick={handleSave} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add</button>
                 </div>
             </div>
         </div>
@@ -895,118 +894,17 @@ const AddInventoryModal = ({ onSave, onClose }: { onSave: (item: string) => void
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-6 space-y-4">
-                <h3 className="font-bold text-white text-lg mb-4">Add Item</h3>
-                <input placeholder="Item Name" value={item} onChange={e => setItem(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white" autoFocus />
-                
-                <div className="max-h-40 overflow-y-auto dagger-scroll space-y-2 mt-2">
-                    {Object.entries(COMMON_ITEMS).map(([cat, items]) => (
-                        <div key={cat}>
-                            <p className="text-[10px] text-slate-500 uppercase font-bold mt-2 mb-1">{cat}</p>
-                            <div className="flex flex-wrap gap-1">
-                                {items.map(i => (
-                                    <button key={i} onClick={() => setItem(i)} className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">{i}</button>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
+                <h3 className="font-bold text-white text-lg">Add Item</h3>
+                <input 
+                    placeholder="Item Name" 
+                    value={item} 
+                    onChange={e => setItem(e.target.value)} 
+                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white"
+                    onKeyDown={e => e.key === 'Enter' && item && onSave(item)}
+                />
+                <div className="flex justify-end gap-2">
                     <button onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white">Cancel</button>
-                    <button onClick={() => onSave(item)} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add Item</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const GoldExchangeModal = ({ currentGold, onUpdate, onClose }: { currentGold: number, onUpdate: (g: number) => void, onClose: () => void }) => {
-    const [totalGold, setTotalGold] = useState(currentGold);
-
-    // Derived breakdown
-    const chests = Math.floor(totalGold / 1000);
-    const bags = Math.floor((totalGold % 1000) / 100);
-    const handfuls = Math.floor((totalGold % 100) / 10);
-    const coins = totalGold % 10;
-
-    useEffect(() => {
-        onUpdate(totalGold);
-    }, [totalGold]);
-
-    const handleChange = (diff: number) => {
-        const newTotal = totalGold + diff;
-        setTotalGold(Math.max(0, newTotal));
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl p-6 space-y-6">
-                <div className="flex justify-between items-center">
-                     <h3 className="font-bold text-white text-lg">Your Hoard</h3>
-                     <button onClick={onClose}><CloseIcon /></button>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-4">
-                     <DraggableValue 
-                        value={chests} 
-                        onChange={(val) => handleChange((val - chests) * 1000)} 
-                        label="Chests" 
-                        min={0}
-                        max={999}
-                     />
-                     <DraggableValue 
-                        value={bags} 
-                        onChange={(val) => handleChange((val - bags) * 100)} 
-                        label="Bags" 
-                        min={-1000} 
-                        max={1000}
-                        loop={10}
-                     />
-                     <DraggableValue 
-                        value={handfuls} 
-                        onChange={(val) => handleChange((val - handfuls) * 10)} 
-                        label="Handfuls" 
-                        min={-1000} 
-                        max={1000}
-                        loop={10}
-                     />
-                     <DraggableValue 
-                        value={coins} 
-                        onChange={(val) => handleChange(val - coins)} 
-                        label="Coins" 
-                        min={-1000} 
-                        max={1000}
-                        loop={10}
-                     />
-                </div>
-
-                <div className="text-center p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                    <div className="text-xs text-slate-500 uppercase tracking-widest mb-1">Total Approximate Value</div>
-                    <div className="text-2xl font-bold text-dagger-gold">{totalGold} Gold</div>
-                </div>
-
-                <div className="bg-slate-900/40 p-4 rounded-lg border border-slate-700/30 text-xs text-slate-400 space-y-3">
-                    <h4 className="text-dagger-gold font-bold uppercase tracking-wider mb-2">Currency Guide</h4>
-                    <div>
-                        <span className="font-bold text-white block mb-0.5">Coin (1g)</span>
-                        A hot meal, ale, travel rations, small bribe.
-                    </div>
-                    <div>
-                        <span className="font-bold text-white block mb-0.5">Handful (10g)</span>
-                        Basic supplies, night at an inn, simple tools.
-                    </div>
-                    <div>
-                        <span className="font-bold text-white block mb-0.5">Bag (100g)</span>
-                        Weapons, armor, horse, fine luxury items.
-                    </div>
-                    <div>
-                        <span className="font-bold text-white block mb-0.5">Chest (1000g)</span>
-                        Sailing ship, small estate, masterwork relics.
-                    </div>
-                </div>
-
-                <div className="flex justify-center">
-                    <button onClick={onClose} className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-full transition-all">Done</button>
+                    <button onClick={() => item && onSave(item)} className="px-4 py-2 bg-dagger-gold text-slate-900 font-bold rounded">Add</button>
                 </div>
             </div>
         </div>
@@ -1024,26 +922,21 @@ export default function App() {
   const hopePanelRef = useRef<HTMLDivElement>(null);
   const stressPanelRef = useRef<HTMLDivElement>(null);
 
+  // Accordion State (Game UI)
+  const [activeSection, setActiveSection] = useState<string | null>('status');
+
   // Modals state
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PROFILE' | 'WEAPON' | 'ABILITY' | 'CHAR_SELECT' | 'INFO_MODAL' | 'EXPERIENCE' | 'INVENTORY' | 'GOLD'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PROFILE' | 'WEAPON' | 'ABILITY' | 'CHAR_SELECT' | 'INFO_MODAL' | 'EXPERIENCE' | 'INVENTORY'>('NONE');
   const [infoModalData, setInfoModalData] = useState({ topic: '', content: '', loading: false });
   const [savedCharacters, setSavedCharacters] = useState<CharacterProfile[]>([]);
   
   // Delete Modal State
-  const [deleteModal, setDeleteModal] = useState<{
-      isOpen: boolean;
-      title: string;
-      message: string;
-      onConfirm: () => void;
-  } | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; } | null>(null);
 
   // Usage Stats
   const [usageStats, setUsageStats] = useState({ calls: 0, tokens: 0 });
-
-  // Auto-Save State
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-  // Ref to track accidental clicks on backdrop (drag from inside to outside)
   const backdropRef = useRef<EventTarget | null>(null);
 
   useEffect(() => {
@@ -1053,29 +946,22 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- Auto-Save Effect ---
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(async () => {
       try {
         const id = await saveCharacterToDB(character);
         setSaveStatus('saved');
-        
-        // Critical: Update state ID if it was missing to prevent duplicate records on subsequent saves
-        // checking if character.id is different to avoid infinite loops if it was just assigned
         if (!character.id) {
             setCharacter(prev => ({ ...prev, id }));
         }
       } catch (e) {
         console.error("Auto-save failed", e);
-        setSaveStatus('idle'); // or error indicator
+        setSaveStatus('idle');
       }
-    }, 1000); // 1s debounce
-
+    }, 1000);
     return () => clearTimeout(timer);
   }, [character]);
-
-  // --- Handlers ---
 
   const handleRoll = async (traitName: string, modifier: number) => {
     const hopeDie = Math.floor(Math.random() * 12) + 1;
@@ -1084,47 +970,30 @@ export default function App() {
     const isCrit = hopeDie === fearDie;
     const withHope = hopeDie >= fearDie;
     
-    const result: RollResult = {
-      hopeDie,
-      fearDie,
-      total,
-      isCrit,
-      withHope,
-      withFear: !withHope
-    };
-
-    setRollResult(result);
-    setIsSuccessChecked(false); // Reset check
-    setShowRollDetail(true); // Automatically open the roll detail
+    setRollResult({ hopeDie, fearDie, total, isCrit, withHope, withFear: !withHope });
+    setIsSuccessChecked(false);
+    setShowRollDetail(true);
   };
 
   const handleSuccessConfirmation = () => {
     if (!rollResult) return;
     setIsSuccessChecked(true);
-
-    // Delay briefly to show the tick, then trigger animation
     setTimeout(() => {
         setShowRollDetail(false);
         setIsSuccessChecked(false);
-
         if (rollResult.isCrit) {
-             // Critical: Reduce Stress
              setAnimatingResource('stress');
              setCharacter(prev => ({ ...prev, stress: Math.max(0, prev.stress - 1) }));
-             stressPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             setActiveSection('status'); // Ensure Status tab is open to see animation
+             setTimeout(() => stressPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
         } else {
-             // Success with Hope: Add Hope
              setAnimatingResource('hope');
              setCharacter(prev => ({ ...prev, hope: Math.min(prev.maxHope, prev.hope + 1) }));
-             hopePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+             setActiveSection('status'); // Ensure Status tab is open to see animation
+             setTimeout(() => hopePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
         }
-
-        // Reset animation after 1.5s
-        setTimeout(() => {
-            setAnimatingResource(null);
-        }, 1500);
-
-    }, 400); // Short delay for visual tick feedback
+        setTimeout(() => setAnimatingResource(null), 1500);
+    }, 400);
   };
 
   const handleAskAI = async (topic: string, context: string) => {
@@ -1149,780 +1018,491 @@ export default function App() {
   };
 
   const handleNewCharacter = () => {
-      // Create a fresh character by copying the blank template.
-      // Important: Ensure ID is undefined so the auto-save creates a new DB entry.
       setCharacter({ ...BLANK_CHARACTER });
       setActiveModal('NONE');
   };
 
-  // --- Editing Handlers ---
-
   const handleUpdateProfile = (formData: Partial<CharacterProfile>) => {
-    // Check if Class or Level has changed, which might invalidate existing abilities
     setCharacter(prev => {
         const updatedChar = { ...prev, ...formData };
-        
-        // If Class or Level changed, filter abilities
         if (formData.class || formData.level) {
             const validDomains = CLASS_DOMAINS[updatedChar.class] || [];
             const currentLevel = updatedChar.level;
-
             const validAbilities = updatedChar.abilities.filter(ability => {
-                // Keep presets only if they match new class/level rules
                 if (ability.isPreset) {
                     if (validDomains.includes(ability.domain)) {
                         return ability.level <= currentLevel;
                     }
                     return false;
                 }
-                // Custom abilities are usually kept, or we can apply strict level rule
                 return ability.level <= currentLevel;
             });
-            
             return { ...updatedChar, abilities: validAbilities };
         }
-
         return updatedChar;
     });
     setActiveModal('NONE');
   };
 
-  const handleAddWeapon = (weapon: Weapon) => {
-    setCharacter(prev => ({ ...prev, weapons: [...prev.weapons, weapon] }));
-    setActiveModal('NONE');
-  };
+  const handleAddWeapon = (weapon: Weapon) => { setCharacter(prev => ({ ...prev, weapons: [...prev.weapons, weapon] })); setActiveModal('NONE'); };
+  const handleAddAbility = (ability: AbilityCard) => { setCharacter(prev => ({ ...prev, abilities: [...prev.abilities, ability] })); setActiveModal('NONE'); };
+  const handleAddExperience = (exp: Experience) => { setCharacter(prev => ({ ...prev, experiences: [...prev.experiences, exp] })); setActiveModal('NONE'); };
+  const handleAddInventory = (item: string) => { if (item) setCharacter(prev => ({ ...prev, inventory: [...prev.inventory, item] })); setActiveModal('NONE'); };
+  
+  const handleUpdateCurrency = (type: 'gold' | 'handfuls' | 'bags' | 'chests', value: number) => {
+      setCharacter(prev => {
+          const newState = { ...prev, [type]: value };
 
-  const handleAddAbility = (ability: AbilityCard) => {
-    setCharacter(prev => ({ ...prev, abilities: [...prev.abilities, ability] }));
-    setActiveModal('NONE');
-  };
+          // Cascading Wealth Logic: If smaller currency hits 10, reset and increment next tier.
+          if (newState.gold >= 10) {
+              const overflow = Math.floor(newState.gold / 10);
+              newState.gold = newState.gold % 10;
+              newState.handfuls = (newState.handfuls || 0) + overflow;
+          }
+          if (newState.handfuls >= 10) {
+              const overflow = Math.floor(newState.handfuls / 10);
+              newState.handfuls = newState.handfuls % 10;
+              newState.bags = (newState.bags || 0) + overflow;
+          }
+          if (newState.bags >= 10) {
+              const overflow = Math.floor(newState.bags / 10);
+              newState.bags = newState.bags % 10;
+              newState.chests = (newState.chests || 0) + overflow;
+          }
 
-  const handleAddExperience = (exp: Experience) => {
-    setCharacter(prev => ({ ...prev, experiences: [...prev.experiences, exp] }));
-    setActiveModal('NONE');
-  };
-
-  const handleAddInventory = (item: string) => {
-    if (item) {
-        setCharacter(prev => ({ ...prev, inventory: [...prev.inventory, item] }));
-    }
-    setActiveModal('NONE');
-  };
-
-  const handleUpdateGold = (newGold: number) => {
-      setCharacter(prev => ({ ...prev, gold: newGold }));
+          return newState;
+      });
   };
 
   const handleDomainClick = (domain: string) => {
     const info = DOMAIN_DESCRIPTIONS[domain];
     if (info) {
-        setInfoModalData({ 
-            topic: `${domain} Domain`, 
-            content: `**Core Theme:**\n${info.description}\n\n**Associated Classes:**\n${info.classes}`, 
-            loading: false 
-        });
+        setInfoModalData({ topic: `${domain} Domain`, content: `**Core Theme:**\n${info.description}\n\n**Associated Classes:**\n${info.classes}`, loading: false });
         setActiveModal('INFO_MODAL');
     }
   };
 
-  // --- Deletion Request Handlers (Popups) ---
+  const requestDeleteWeapon = (id: string) => { setDeleteModal({ isOpen: true, title: "Delete Weapon", message: "Remove this weapon?", onConfirm: () => { setCharacter(prev => ({ ...prev, weapons: prev.weapons.filter(w => w.id !== id) })); setDeleteModal(null); } }); };
+  const requestDeleteAbility = (id: string) => { setDeleteModal({ isOpen: true, title: "Delete Ability", message: "Remove this ability?", onConfirm: () => { setCharacter(prev => ({ ...prev, abilities: prev.abilities.filter(a => a.id !== id) })); setDeleteModal(null); } }); };
+  const requestDeleteExperience = (index: number) => { setDeleteModal({ isOpen: true, title: "Forget Experience", message: "Remove this tag?", onConfirm: () => { setCharacter(prev => ({ ...prev, experiences: prev.experiences.filter((_, i) => i !== index) })); setDeleteModal(null); } }); };
+  const requestDeleteInventory = (index: number) => { setDeleteModal({ isOpen: true, title: "Remove Item", message: "Remove from inventory?", onConfirm: () => { setCharacter(prev => ({ ...prev, inventory: prev.inventory.filter((_, i) => i !== index) })); setDeleteModal(null); } }); };
+  const requestDeleteSavedChar = (id: string) => { setDeleteModal({ isOpen: true, title: "Delete Character", message: "Permanently delete?", onConfirm: async () => { await deleteCharacterFromDB(id); const chars = await getAllCharacters(); setSavedCharacters(chars); setDeleteModal(null); } }); };
 
-  const requestDeleteWeapon = (id: string) => {
-    setDeleteModal({
-        isOpen: true,
-        title: "Delete Weapon",
-        message: "Are you sure you want to remove this weapon? This action cannot be undone.",
-        onConfirm: () => {
-            setCharacter(prev => ({ ...prev, weapons: prev.weapons.filter(w => w.id !== id) }));
-            setDeleteModal(null);
-        }
-    });
-  };
-
-  const requestDeleteAbility = (id: string) => {
-    setDeleteModal({
-        isOpen: true,
-        title: "Delete Ability",
-        message: "Are you sure you want to remove this ability? This action cannot be undone.",
-        onConfirm: () => {
-            setCharacter(prev => ({ ...prev, abilities: prev.abilities.filter(a => a.id !== id) }));
-            setDeleteModal(null);
-        }
-    });
-  };
-
-  const requestDeleteExperience = (index: number) => {
-    setDeleteModal({
-        isOpen: true,
-        title: "Forget Experience",
-        message: "Are you sure you want to remove this experience tag?",
-        onConfirm: () => {
-            setCharacter(prev => ({
-                ...prev,
-                experiences: prev.experiences.filter((_, i) => i !== index)
-            }));
-            setDeleteModal(null);
-        }
-    });
-  };
-
-  const requestDeleteInventory = (index: number) => {
-      setDeleteModal({
-        isOpen: true,
-        title: "Remove Item",
-        message: "Are you sure you want to remove this item from your inventory?",
-        onConfirm: () => {
-             setCharacter(prev => ({ ...prev, inventory: prev.inventory.filter((_, i) => i !== index) }));
-             setDeleteModal(null);
-        }
-      });
-  };
-
-  const requestDeleteSavedChar = (id: string) => {
-      setDeleteModal({
-          isOpen: true,
-          title: "Delete Character",
-          message: "Are you sure you want to permanently delete this saved character? This cannot be undone.",
-          onConfirm: async () => {
-            await deleteCharacterFromDB(id);
-            const chars = await getAllCharacters();
-            setSavedCharacters(chars);
-            setDeleteModal(null);
-          }
-      });
-  };
-
-  // --- Helpers ---
   const getResultColor = (res: RollResult) => {
     if (res.isCrit) return 'text-dagger-gold border-dagger-gold';
     if (res.withHope) return 'text-dagger-hope border-dagger-hope';
     return 'text-dagger-fear border-dagger-fear';
   };
-
   const getResultBg = (res: RollResult) => {
     if (res.isCrit) return 'bg-yellow-500/20';
     if (res.withHope) return 'bg-cyan-500/20';
     return 'bg-purple-500/20';
   };
-  
-  // Calculate gold display
-  const chests = Math.floor(character.gold / 1000);
-  const bags = Math.floor((character.gold % 1000) / 100);
-  const handfuls = Math.floor((character.gold % 100) / 10);
-  const coins = character.gold % 10;
 
-  // Get current domains
   const characterDomains = CLASS_DOMAINS[character.class] || [];
+  const toggleSection = (id: string) => setActiveSection(activeSection === id ? null : id);
 
   return (
-    <div className="min-h-screen bg-dagger-dark text-slate-200 p-4 md:p-8 font-sans relative selection:bg-dagger-fear selection:text-white pb-24">
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-32 overflow-x-hidden selection:bg-dagger-fear selection:text-white">
       
-      {/* Background Overlay for Focus Animation */}
-      {animatingResource && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-all duration-500 pointer-events-none"></div>
+      {/* Mobile Container Limit */}
+      <div className="max-w-lg mx-auto relative min-h-screen bg-slate-900 shadow-2xl p-2 sm:p-4">
+
+        {/* --- IDENTITY SECTION --- */}
+        <AccordionSection 
+            id="identity" 
+            title="IDENTITY" 
+            icon={<IdCardIcon />} 
+            activeSection={activeSection} 
+            onToggle={toggleSection}
+            summary={`${character.name} - Lvl ${character.level} ${character.class}`}
+        >
+             <div className="flex flex-col items-center gap-4">
+                 <div className="flex flex-col items-center relative group w-full">
+                    {/* Large Avatar */}
+                    <SmartAvatar 
+                        ancestry={character.ancestry}
+                        level={character.level}
+                        className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl border-2 border-dagger-gold shadow-2xl z-10 bg-slate-800"
+                    />
+                    
+                    {/* Hanging Domain Banners */}
+                    <div className="flex gap-2 -mt-3 z-0 pt-0">
+                        {characterDomains.map(domain => {
+                            const res = DOMAIN_RESOURCES[domain];
+                            if (!res) return null;
+                            return (
+                                <div 
+                                    key={domain} 
+                                    onClick={() => handleDomainClick(domain)}
+                                    className={`w-12 h-24 flex items-start justify-center shadow-md ${res.colorBg} cursor-pointer hover:brightness-110 transition-all active:translate-y-0.5`} 
+                                    style={{ 
+                                        clipPath: "polygon(0% 0%, 100% 0%, 100% 60%, 92% 68%, 92% 10%, 90% 96%, 65% 88%, 50% 75%, 35% 88%, 15% 96%, 8% 20%, 8% 68%, 0% 60%)",
+                                        paddingTop: "1.2rem"
+                                    }}
+                                >
+                                    <img src={res.icon} alt={domain} className="w-12 h-12 object-contain drop-shadow-sm" style={{ filter: `drop-shadow(1px 0 0 rgba(255, 215, 0, 0.9))` }} />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="text-center w-full">
+                    <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-wide">{character.name}</h1>
+                    <p className="text-slate-400 text-sm">{character.ancestry} {character.class} • <span className="text-dagger-gold">{character.subclass}</span></p>
+                    <p className="text-xs text-slate-500 mt-1">{character.community} Community</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 w-full mt-2">
+                    <button onClick={() => setActiveModal('PROFILE')} className="flex flex-col items-center justify-center p-2 bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 transition-colors">
+                        <EditIcon /><span className="text-[10px] mt-1">EDIT</span>
+                    </button>
+                    <button onClick={loadCharacters} className="flex flex-col items-center justify-center p-2 bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 transition-colors">
+                        <FolderIcon /><span className="text-[10px] mt-1">LOAD</span>
+                    </button>
+                    <button onClick={handleNewCharacter} className="flex flex-col items-center justify-center p-2 bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 transition-colors">
+                        <FilePlusIcon /><span className="text-[10px] mt-1">NEW</span>
+                    </button>
+                </div>
+             </div>
+        </AccordionSection>
+
+        {/* --- ATTRIBUTES SECTION (Traits) --- */}
+        <AccordionSection
+            id="attributes"
+            title="ATTRIBUTES"
+            icon={<PersonRunningIcon />}
+            activeSection={activeSection}
+            onToggle={toggleSection}
+            summary="Traits & Evasion"
+        >
+             <div className="space-y-4">
+                 <div className="grid grid-cols-1 gap-2">
+                     {character.traits.map((trait) => (
+                        <div key={trait.name} className="flex items-center justify-between bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                            <div className="flex items-center gap-2" onClick={() => handleStaticInfo(trait.name)}>
+                                <InfoIcon />
+                                <span className="font-semibold text-slate-300 text-sm">{trait.name}</span>
+                            </div>
+                            <button 
+                                onClick={() => handleRoll(trait.name, trait.value)}
+                                className="w-10 h-8 flex items-center justify-center bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 hover:border-dagger-hope transition-all font-bold text-sky-300 text-sm"
+                            >
+                                {trait.value >= 0 ? `+${trait.value}` : trait.value}
+                            </button>
+                        </div>
+                     ))}
+                 </div>
+                 
+                 <div className="flex items-center justify-between bg-slate-800 p-3 rounded border border-slate-600">
+                    <div className="flex items-center gap-2">
+                        <h2 className="font-serif font-bold text-slate-300 text-sm">Evasion</h2>
+                        <button onClick={() => handleStaticInfo("Evasion")} className="text-slate-500 scale-75"><InfoIcon /></button>
+                    </div>
+                    <span className="text-2xl font-bold text-white">{character.evasion}</span>
+                 </div>
+                 <p className="text-[10px] text-slate-500 text-center italic">Tap value to roll.</p>
+             </div>
+        </AccordionSection>
+
+        {/* --- STATUS SECTION (Vitals) --- */}
+        <AccordionSection
+            id="status"
+            title={
+  <>
+    STATUS <span style={{ opacity: 0 }}>text for bars longer</span>
+  </>
+}
+            icon={<HeartPulseIcon />}
+            activeSection={activeSection}
+            onToggle={toggleSection}
+            summary={
+                <div className="flex gap-2 mt-1">
+                     <div className="h-2.5 flex-1 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-red-500" style={{width: `${(character.hp / MAX_HP) * 100}%`}}></div></div>
+                     <div className="h-2.5 flex-1 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-purple-500" style={{width: `${(character.stress / character.maxStress) * 100}%`}}></div></div>
+                     <div className="h-2.5 flex-1 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-slate-500" style={{width: `${(character.armor / character.maxArmor) * 100}%`}}></div></div>
+                     <div className="h-2.5 flex-1 bg-slate-700 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{width: `${(character.hope / character.maxHope) * 100}%`}}></div></div>
+                </div>
+            }
+        >
+            <div className="space-y-4">
+                 {/* Damage & Armor Grid */}
+                 <div className="grid grid-cols-2 gap-3">
+                     {/* Damage */}
+                     <div className="bg-slate-900/50 rounded-lg p-2 border border-red-900/30 flex flex-col items-center">
+                         <div className="flex items-center gap-1 mb-1">
+                             <span className="text-[10px] uppercase text-red-400 font-bold">Damage</span>
+                             <button onClick={() => handleStaticInfo("Damage")} className="scale-75 text-slate-500"><InfoIcon /></button>
+                         </div>
+                         <div className="flex items-center justify-center gap-2 mb-2 mt-1 px-3 py-1 bg-slate-800/40 rounded-lg border border-slate-700/30">
+                             <span className="text-lg font-bold text-slate-200">{character.minorThreshold}</span>
+                             <span className="text-slate-500 text-sm font-light">/</span>
+                             <span className="text-lg font-bold text-slate-200">{character.majorThreshold}</span>
+                         </div>
+                         <div className="text-4xl font-bold text-white mb-2">{character.hp}</div>
+                         <div className="flex flex-wrap justify-center gap-1">
+                             {Array.from({length: MAX_HP}).map((_, i) => (
+                                <button key={i} onClick={() => setCharacter(c => ({...c, hp: i + 1 === c.hp ? i : i + 1}))} className={`w-6 h-6 rounded-full border border-red-500 ${i < character.hp ? 'bg-red-500' : 'bg-transparent'}`} />
+                             ))}
+                         </div>
+                     </div>
+
+                     {/* Armor */}
+                     <div className="bg-slate-900/50 rounded-lg p-2 border border-slate-700 flex flex-col items-center">
+                         <div className="flex items-center gap-1 mb-1">
+                             <span className="text-[10px] uppercase text-slate-400 font-bold">Armor Slots</span>
+                             <button onClick={() => handleStaticInfo("Armor")} className="scale-75 text-slate-500"><InfoIcon /></button>
+                         </div>
+                         <div className="h-[29px] mb-2"></div> {/* Spacer */}
+                         <div className="text-4xl font-bold text-white mb-2">{character.armor}</div>
+                         <div className="flex flex-wrap justify-center gap-1">
+                             {Array.from({length: character.maxArmor}).map((_, i) => (
+                                <button key={i} onClick={() => setCharacter(c => ({...c, armor: i + 1 === c.armor ? i : i + 1}))} className={`w-6 h-6 rounded-full border border-slate-400 ${i < character.armor ? 'bg-slate-400' : 'bg-transparent'}`} />
+                             ))}
+                         </div>
+                     </div>
+                 </div>
+
+                 {/* Stress */}
+                 <div ref={stressPanelRef} className={`bg-slate-900/50 rounded-lg p-3 border border-purple-900/30 transition-all duration-500 ${animatingResource === 'stress' ? 'ring-2 ring-purple-500 scale-105 bg-purple-900/20' : ''}`}>
+                     <div className="flex justify-between items-center mb-2">
+                         <div className="flex items-center gap-2">
+                             <span className="text-xs uppercase text-purple-400 font-bold">Stress</span>
+                             <button onClick={() => handleStaticInfo("Stress")} className="scale-75 text-slate-500"><InfoIcon /></button>
+                         </div>
+                         <span className="text-lg font-bold text-purple-500">{character.stress}</span>
+                     </div>
+                     <div className="flex gap-1.5 flex-wrap">
+                         {Array.from({length: character.maxStress}).map((_, i) => (
+                            <button key={i} onClick={() => setCharacter(c => ({...c, stress: i + 1 === c.stress ? i : i + 1}))} className={`w-5 h-5 rounded-full border border-purple-500 ${i < character.stress ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]' : 'bg-transparent'}`} />
+                         ))}
+                     </div>
+                 </div>
+
+                 {/* Hope */}
+                 <div ref={hopePanelRef} className={`bg-slate-900/50 rounded-lg p-3 border border-sky-900/30 transition-all duration-500 ${animatingResource === 'hope' ? 'ring-2 ring-dagger-hope scale-105 bg-sky-900/20' : ''}`}>
+                     <div className="flex justify-between items-center mb-2">
+                         <div className="flex items-center gap-2">
+                             <span className="text-xs uppercase text-dagger-hope font-bold">Hope</span>
+                             <button onClick={() => handleStaticInfo("Hope")} className="scale-75 text-slate-500"><InfoIcon /></button>
+                         </div>
+                         <span className="text-lg font-bold text-dagger-hope">{character.hope}</span>
+                     </div>
+                     <div className="flex gap-1.5 flex-wrap">
+                         {Array.from({length: character.maxHope}).map((_, i) => (
+                            <button key={i} onClick={() => setCharacter(c => ({...c, hope: i + 1 === c.hope ? i : i + 1}))} className={`w-5 h-5 rounded-full border border-dagger-hope ${i < character.hope ? 'bg-dagger-hope shadow-[0_0_8px_rgba(56,189,248,0.6)]' : 'bg-transparent'}`} />
+                         ))}
+                     </div>
+                 </div>
+            </div>
+        </AccordionSection>
+
+        {/* --- ARSENAL SECTION (Weapons) --- */}
+        <AccordionSection
+            id="combat"
+            title="ARSENAL"
+            icon={<SwordIcon />}
+            activeSection={activeSection}
+            onToggle={toggleSection}
+            summary={`${character.weapons.length} Equipped`}
+        >
+             <div className="space-y-3">
+                 {character.weapons.map((w) => (
+                    <div key={w.id} className="bg-slate-900 p-3 rounded border border-slate-700 flex justify-between items-center group relative overflow-hidden">
+                        <div className="flex items-start gap-3 z-10">
+                            <div className="mt-1 text-slate-500 text-sm"><SwordIcon /></div>
+                            <div>
+                                <h4 className="font-bold text-slate-200 text-sm">{w.name}</h4>
+                                <p className="text-[10px] text-slate-400">{w.type} • {w.range} • <span className="text-slate-200">{w.damage}</span></p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2 z-10">
+                             <button onClick={() => handleAskAI(`Weapon: ${w.name}`, w.description)} className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400 border border-slate-700">AI Info</button>
+                             <button onClick={(e) => { e.stopPropagation(); requestDeleteWeapon(w.id); }} className="text-slate-600 hover:text-red-400 p-1"><TrashIcon /></button>
+                        </div>
+                    </div>
+                 ))}
+                 <button onClick={() => setActiveModal('WEAPON')} className="w-full py-2 bg-slate-800 border border-slate-600 border-dashed rounded text-slate-400 text-xs hover:text-white hover:border-solid hover:bg-slate-700 transition-all">
+                     <PlusIcon /> Add Weapon
+                 </button>
+             </div>
+        </AccordionSection>
+
+        {/* --- GRIMOIRE SECTION (Abilities) --- */}
+        <AccordionSection
+            id="abilities"
+            title="GRIMOIRE"
+            icon={<ScrollIcon />}
+            activeSection={activeSection}
+            onToggle={toggleSection}
+            summary={`${character.abilities.length} Abilities`}
+        >
+             <div className="grid grid-cols-1 gap-3">
+                {character.abilities.map(a => (
+                    <div key={a.id} className="bg-slate-900 p-3 rounded border border-slate-700 relative" onClick={() => handleAskAI(`Ability: ${a.name}`, a.description)}>
+                        <div className="flex justify-between mb-1">
+                             <span className="text-[9px] font-bold text-dagger-gold uppercase flex items-center gap-1">{a.isPreset && <i className="fa-solid fa-star text-[8px]" />}{a.domain} {a.level}</span>
+                             <span className="text-[9px] text-slate-500">{a.cost}</span>
+                        </div>
+                        <h4 className="font-bold text-slate-200 text-sm mb-1">{a.name}</h4>
+                        <p className="text-[10px] text-slate-400 line-clamp-2">{a.description}</p>
+                        <button onClick={(e) => { e.stopPropagation(); requestDeleteAbility(a.id); }} className="absolute bottom-2 right-2 text-slate-600 hover:text-red-400"><TrashIcon /></button>
+                    </div>
+                ))}
+                <button onClick={() => setActiveModal('ABILITY')} className="w-full py-2 bg-slate-800 border border-slate-600 border-dashed rounded text-slate-400 text-xs hover:text-white hover:border-solid hover:bg-slate-700 transition-all">
+                     <PlusIcon /> Add Ability
+                </button>
+             </div>
+        </AccordionSection>
+
+        {/* --- EQUIPMENT SECTION (Inventory) --- */}
+        <AccordionSection
+            id="inventory"
+            title="EQUIPMENT"
+            icon={<BagIcon />}
+            activeSection={activeSection}
+            onToggle={toggleSection}
+            summary={`${character.gold} Coins • ${character.inventory.length} Items`}
+        >
+            <div className="space-y-4">
+                 {/* Gold */}
+                 <div className="bg-slate-900/40 p-3 rounded-lg border border-dagger-gold/20">
+                    <div className="flex items-center gap-2 mb-3 border-b border-dagger-gold/10 pb-2 px-1">
+                        <CoinIcon />
+                        <h4 className="font-bold text-dagger-gold text-xs tracking-widest">WEALTH</h4>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-2">
+                        <DraggableValue label="Coins" value={character.gold} onChange={(v) => handleUpdateCurrency('gold', v)} max={10} />
+                        <DraggableValue label="Handfuls" value={character.handfuls || 0} onChange={(v) => handleUpdateCurrency('handfuls', v)} max={10} />
+                        <DraggableValue label="Bags" value={character.bags || 0} onChange={(v) => handleUpdateCurrency('bags', v)} max={10} />
+                        <DraggableValue label="Chests" value={character.chests || 0} onChange={(v) => handleUpdateCurrency('chests', v)} />
+                    </div>
+                 </div>
+
+                 {/* Experiences */}
+                 <div>
+                     <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-1">
+                         <h4 className="text-xs font-bold text-slate-400">EXPERIENCES</h4>
+                         <button onClick={() => setActiveModal('EXPERIENCE')} className="text-slate-500 text-xs hover:text-white"><PlusIcon /></button>
+                     </div>
+                     <div className="space-y-1">
+                        {character.experiences.map((e, i) => (
+                            <div key={e.id || i} className="flex justify-between items-center p-2 bg-slate-900/50 rounded border border-slate-700/50">
+                                <span className="text-xs text-slate-300">{e.name}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-dagger-hope">+{e.value}</span>
+                                    <button onClick={(ev) => { ev.stopPropagation(); requestDeleteExperience(i); }} className="text-slate-600 hover:text-red-400"><TrashIcon /></button>
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                 </div>
+
+                 {/* Items */}
+                 <div>
+                     <div className="flex justify-between items-center mb-2 border-b border-slate-700 pb-1">
+                         <h4 className="text-xs font-bold text-slate-400">INVENTORY</h4>
+                         <button onClick={() => setActiveModal('INVENTORY')} className="text-slate-500 text-xs hover:text-white"><PlusIcon /></button>
+                     </div>
+                     <ul className="space-y-1">
+                        {character.inventory.map((item, i) => (
+                            <li key={i} className="text-xs text-slate-400 flex items-center justify-between p-1">
+                                <div className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-slate-600"></span>{item}</div>
+                                <button onClick={(e) => { e.stopPropagation(); requestDeleteInventory(i); }} className="text-slate-600 hover:text-red-400"><TrashIcon /></button>
+                            </li>
+                        ))}
+                     </ul>
+                 </div>
+            </div>
+        </AccordionSection>
+
+      </div>
+      
+      {/* --- FLOATING WIDGETS --- */}
+
+      {/* Dice Result Overlay */}
+      {rollResult && showRollDetail && (
+        <div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onMouseDown={(e) => { if(e.target === e.currentTarget) backdropRef.current = e.target; }}
+            onMouseUp={(e) => { if(e.target === e.currentTarget && backdropRef.current === e.currentTarget) setShowRollDetail(false); backdropRef.current = null; }}
+        >
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden text-center" onClick={(e) => e.stopPropagation()}>
+                <div className={`absolute inset-0 opacity-10 ${getResultBg(rollResult)}`}></div>
+                <h3 className={`relative text-xl font-serif font-bold mb-4 ${getResultColor(rollResult)}`}>{rollResult.isCrit ? "CRITICAL!" : (rollResult.withHope ? "HOPE" : "FEAR")}</h3>
+                <div className="relative text-6xl font-bold text-white mb-6 drop-shadow-xl">{rollResult.total}</div>
+                <div className="relative flex justify-center gap-8 mb-6">
+                    <div className="text-center"><div className="text-[10px] uppercase text-dagger-hope mb-1">Hope</div><div className={`text-2xl font-bold ${rollResult.withHope ? 'text-dagger-hope' : 'text-slate-600'}`}>{rollResult.hopeDie}</div></div>
+                    <div className="text-center"><div className="text-[10px] uppercase text-dagger-fear mb-1">Fear</div><div className={`text-2xl font-bold ${!rollResult.withHope ? 'text-dagger-fear' : 'text-slate-600'}`}>{rollResult.fearDie}</div></div>
+                </div>
+                {rollResult.withHope && (
+                    <button onClick={handleSuccessConfirmation} className={`relative w-16 h-16 rounded-xl border-2 flex items-center justify-center mx-auto transition-all ${isSuccessChecked ? 'bg-dagger-gold border-dagger-gold text-slate-900 scale-110' : 'bg-slate-800 border-slate-600 hover:border-dagger-gold text-slate-600 hover:text-dagger-gold'}`}>
+                        <CheckIcon />
+                    </button>
+                )}
+            </div>
+        </div>
       )}
 
-      {/* --- HEADER --- */}
-      <header className="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700 pb-4 relative z-0">
-        <div className="flex items-center gap-6">
-            
-            {/* Avatar Column */}
-            <div className="flex flex-col items-center relative group">
-                <SmartAvatar 
-                    ancestry={character.ancestry}
-                    level={character.level}
-                    className="w-24 h-24 rounded-full border-2 border-dagger-gold shadow-lg z-10 bg-slate-800"
-                />
-                
-                {/* Domain Banners - Hanging below */}
-                <div className="flex gap-1 -mt-7 z-0 pt-0">
-                    {characterDomains.map(domain => {
-                        const res = DOMAIN_RESOURCES[domain];
-                        if (!res) return null;
-                        return (
-                            <div 
-                                key={domain} 
-                                onClick={() => handleDomainClick(domain)}
-                                className={`w-10 h-20 flex items-start justify-center shadow-md ${res.colorBg} cursor-pointer hover:brightness-110 transition-all active:translate-y-0.5`} 
-                                title={`Click to view ${domain} Domain info`}
-                                style={{ 
-                                    clipPath: "polygon(0% 0%, 100% 0%, 100% 60%, 92% 68%, 92% 10%, 90% 96%, 65% 88%, 50% 75%, 35% 88%, 15% 96%, 8% 20%, 8% 68%, 0% 60%)",
-                                    paddingTop: "1.2rem"
-                                }}
-                            >
-                                <img src={res.icon} alt={domain} className="w-11 h-11 object-contain drop-shadow-sm" style={{
-                            filter: `
-                            drop-shadow(1px 0 0 rgba(255, 215, 0, 0.9))
-                            drop-shadow(-1px 0 0 rgba(255, 215, 0, 0.1))
-                            drop-shadow(0 1px 0 rgba(255, 215, 0, 0.1))
-                            drop-shadow(0 -1px 0 rgba(255, 215, 0, 0.1))
-                        `
-                    }}
-                                />
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
+      {/* Floating Dice Button (Minimized) */}
+      {rollResult && !showRollDetail && (
+        <button
+            onClick={() => setShowRollDetail(true)}
+            className={`fixed bottom-4 left-4 w-12 h-12 rounded-full shadow-2xl border-2 flex items-center justify-center z-40 transition-transform hover:scale-110 active:scale-95 bg-slate-900 ${getResultColor(rollResult)}`}
+        >
+            <span className="text-lg font-bold">{rollResult.total}</span>
+        </button>
+      )}
 
-            <div className="mt-2 md:mt-0">
-                <h1 className="text-3xl font-serif font-bold text-white tracking-wide">{character.name}</h1>
-                <p className="text-slate-400 flex items-center gap-2 flex-wrap">
-                    Level {character.level} {character.ancestry} {character.class} 
-                    <span className="text-slate-600">•</span> 
-                    <span className="text-dagger-gold">{character.subclass}</span>
-                    <button onClick={() => handleStaticInfo("Class Features")} className="ml-2 hover:text-white transition-colors">
-                    <InfoIcon />
-                    </button>
-                </p>
-            </div>
-        </div>
-        <div className="flex gap-2 items-center">
-          <button onClick={handleNewCharacter} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-all text-sm font-medium">
-            <FilePlusIcon /> <span className="hidden sm:inline">New</span>
-          </button>
-
-          <button onClick={loadCharacters} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-600 transition-all text-sm font-medium">
-            <FolderIcon /> <span className="hidden sm:inline">Load</span>
-          </button>
-          
-          <button onClick={() => setActiveModal('PROFILE')} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all text-white text-sm font-medium">
-            <EditIcon /> <span className="hidden sm:inline">Edit</span>
-          </button>
-        </div>
-      </header>
-
-      {/* --- MAIN GRID --- */}
-      <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 relative">
-        
-        {/* LEFT COLUMN: TRAITS (3 cols) */}
-        <div className="md:col-span-3 space-y-4">
-          <div className="glass-panel rounded-xl p-4">
-            <h2 className="text-xl font-serif font-bold mb-4 text-slate-300 border-b border-slate-700 pb-2">Traits</h2>
-            <div className="space-y-3">
-              {character.traits.map((trait) => (
-                <div key={trait.name} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => handleStaticInfo(trait.name)}
-                      className="text-slate-500 hover:text-slate-300"
-                    >
-                      <InfoIcon />
-                    </button>
-                    <span className="font-semibold text-slate-300 w-24">{trait.name}</span>
-                  </div>
-                  <button 
-                    onClick={() => handleRoll(trait.name, trait.value)}
-                    className="w-12 h-10 flex items-center justify-center bg-slate-800 border border-slate-600 rounded hover:bg-slate-700 hover:border-dagger-hope transition-all text-lg font-bold text-sky-300"
-                  >
-                    {trait.value >= 0 ? `+${trait.value}` : trait.value}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 mt-4 italic text-center">Click a value to make a check.</p>
-          </div>
-
-          <div className="glass-panel rounded-xl p-4">
-             <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-serif font-bold text-slate-300">Evasion</h2>
-                <button onClick={() => handleStaticInfo("Evasion")} className="text-slate-500 hover:text-slate-300"><InfoIcon /></button>
-            </div>
-            <div className="flex items-center justify-center h-16 bg-slate-900/50 rounded-lg border border-slate-700">
-              <span className="text-3xl font-bold text-white">{character.evasion}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CENTER COLUMN: VITALS & COMBAT (6 cols) */}
-        <div className="md:col-span-6 space-y-6">
-          
-          {/* Vitals Row - Redesigned Grid */}
-          <div className="grid grid-cols-2 gap-4">
-             {/* Damage - Top Left */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center h-44">
-              <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50"></div>
-              
-              {/* Header */}
-              <div className="flex justify-center items-center gap-1 mb-1 mt-1">
-                 <h3 className="text-sm uppercase tracking-wider text-slate-400">Damage</h3>
-                 <button onClick={() => handleStaticInfo("Damage")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-              </div>
-
-              {/* Thresholds Display */}
-              <div className="flex gap-2 justify-center w-full mb-1">
-                 <div className="flex flex-col items-center">
-                    <span className="text-[9px] text-slate-500 uppercase font-bold">Min</span>
-                    <span className="text-xs text-slate-300 leading-none">{character.minorThreshold}</span>
-                 </div>
-                 <div className="w-px bg-slate-700 h-6"></div>
-                 <div className="flex flex-col items-center">
-                    <span className="text-[9px] text-slate-500 uppercase font-bold">Maj</span>
-                    <span className="text-xs text-slate-300 leading-none">{character.majorThreshold}</span>
-                 </div>
-                 <div className="w-px bg-slate-700 h-6"></div>
-                 <div className="flex flex-col items-center">
-                    <span className="text-[9px] text-slate-500 uppercase font-bold">Sev</span>
-                    <span className="text-xs text-slate-300 leading-none">{character.severeThreshold}</span>
-                 </div>
-              </div>
-              
-              {/* Main Number */}
-              <div className="flex-grow flex items-center justify-center">
-                <div className="text-4xl font-bold text-white drop-shadow-md">{character.hp}</div>
-              </div>
-              
-              {/* Interactive Circles */}
-              <div className="flex flex-wrap justify-center gap-1.5 mb-1 mt-auto">
-                  {Array.from({length: MAX_HP}).map((_, i) => (
-                    <button 
-                        key={i}
-                        onClick={() => setCharacter(c => ({...c, hp: i + 1 === c.hp ? i : i + 1}))}
-                        className={`w-5 h-5 rounded-full border border-red-500 transition-all ${
-                            i < character.hp ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-transparent opacity-30'
-                        }`}
-                    />
-                  ))}
-              </div>
-            </div>
-
-            {/* Armor - Top Right */}
-            <div className="glass-panel rounded-xl p-3 text-center relative overflow-hidden flex flex-col items-center h-44">
-              <div className="absolute top-0 left-0 w-full h-1 bg-slate-400/50"></div>
-              
-              {/* Header */}
-              <div className="flex justify-center items-center gap-1 mb-1 mt-1">
-                 <h3 className="text-sm uppercase tracking-wider text-slate-400">Armor</h3>
-                 <button onClick={() => handleStaticInfo("Armor")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-              </div>
-
-               {/* Spacer to match Damage Thresholds height */}
-               <div className="h-[26px] mb-1"></div>
-              
-              {/* Main Number */}
-              <div className="flex-grow flex items-center justify-center">
-                 <div className="text-4xl font-bold text-white drop-shadow-md">{character.armor}</div>
-              </div>
-
-              {/* Interactive Circles */}
-              <div className="flex flex-wrap justify-center gap-1.5 mb-1 mt-auto">
-                  {Array.from({length: character.maxArmor}).map((_, i) => (
-                    <button 
-                        key={i}
-                        onClick={() => setCharacter(c => ({...c, armor: i + 1 === c.armor ? i : i + 1}))}
-                        className={`w-5 h-5 rounded-full border border-slate-400 transition-all ${
-                            i < character.armor ? 'bg-slate-400 shadow-[0_0_8px_rgba(148,163,184,0.6)]' : 'bg-transparent opacity-30'
-                        }`}
-                    />
-                  ))}
-              </div>
-            </div>
-
-            {/* Stress - Full Width Horizontal */}
-            <div 
-                ref={stressPanelRef}
-                className={`col-span-2 glass-panel rounded-xl p-3 flex items-center justify-between px-6 relative overflow-hidden transition-all duration-500 origin-center ${animatingResource === 'stress' ? 'z-[60] scale-110 shadow-purple-500/50 shadow-2xl bg-purple-900/40 border-purple-400' : ''}`}
-            >
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500"></div>
-                <div className="flex items-center gap-2">
-                    <h3 className="text-sm uppercase tracking-wider text-slate-400">Stress</h3>
-                    <button onClick={() => handleStaticInfo("Stress")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                </div>
-                <div className="flex gap-2">
-                    {Array.from({length: character.maxStress}).map((_, i) => (
-                        <button 
-                            key={i}
-                            onClick={() => setCharacter(c => ({...c, stress: i + 1 === c.stress ? i : i + 1}))}
-                            className={`w-6 h-6 rounded-full border border-purple-500 transition-all ${
-                                i < character.stress ? 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-transparent opacity-30'
-                            }`}
-                        />
-                    ))}
-                </div>
-                <span className="text-xl font-bold text-purple-500">{character.stress}</span>
-            </div>
-            
-             {/* Hope - Full Width Horizontal */}
-             <div 
-                ref={hopePanelRef}
-                className={`col-span-2 glass-panel rounded-xl p-3 flex items-center justify-between px-6 relative overflow-hidden transition-all duration-500 origin-center ${animatingResource === 'hope' ? 'z-[60] scale-110 shadow-sky-500/50 shadow-2xl bg-sky-900/40 border-sky-400' : ''}`}
-             >
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-dagger-hope"></div>
-                <div className="flex items-center gap-2">
-                    <h3 className="text-sm uppercase tracking-wider text-slate-400">Hope</h3>
-                    <button onClick={() => handleStaticInfo("Hope")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                </div>
-                <div className="flex gap-2">
-                    {Array.from({length: character.maxHope}).map((_, i) => (
-                        <button 
-                            key={i}
-                            onClick={() => setCharacter(c => ({...c, hope: i + 1 === c.hope ? i : i + 1}))}
-                            className={`w-6 h-6 rounded-full border border-dagger-hope transition-all ${
-                                i < character.hope ? 'bg-dagger-hope shadow-[0_0_10px_rgba(56,189,248,0.5)]' : 'bg-transparent opacity-30'
-                            }`}
-                        />
-                    ))}
-                </div>
-                <span className="text-xl font-bold text-dagger-hope">{character.hope}</span>
-            </div>
-          </div>
-
-          {/* Weapons */}
-          <div className="glass-panel rounded-xl p-4">
-             <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                <div className="flex items-center gap-2">
-                     <h2 className="text-xl font-serif font-bold text-slate-300">Weapons</h2>
-                     <button onClick={() => handleStaticInfo("Weapons")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                </div>
-                <button onClick={() => setActiveModal('WEAPON')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
-             </div>
-             <div className="space-y-3">
-                {character.weapons.map((w) => (
-                    <div key={w.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex justify-between items-center group">
-                        <div className="flex items-start gap-3">
-                            <div className="mt-1 text-slate-500"><SwordIcon /></div>
-                            <div>
-                                <h4 className="font-bold text-slate-200">{w.name}</h4>
-                                <p className="text-xs text-slate-400">{w.type} • {w.range} • {w.damage}</p>
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => handleAskAI(`Weapon: ${w.name}`, w.description)}
-                                className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 hover:text-white border border-slate-700"
-                            >
-                                Ask AI
-                            </button>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); requestDeleteWeapon(w.id); }}
-                                className="text-slate-600 hover:text-red-400 p-1 opacity-50 group-hover:opacity-100 transition-opacity"
-                            >
-                                <TrashIcon />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-             </div>
-          </div>
-
-          {/* Abilities */}
-          <div className="glass-panel rounded-xl p-4">
-            <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
-                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-serif font-bold text-slate-300">Abilities</h2>
-                    <button onClick={() => handleStaticInfo("Abilities")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                 </div>
-                <button onClick={() => setActiveModal('ABILITY')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
-             </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {character.abilities.map(a => (
-                    <div key={a.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 hover:border-slate-500 transition-colors relative group">
-                        <div className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 transition-opacity z-10">
-                             <button onClick={(e) => { e.stopPropagation(); requestDeleteAbility(a.id); }} className="text-slate-500 hover:text-red-400"><TrashIcon /></button>
-                        </div>
-                        <div className="cursor-pointer" onClick={() => handleAskAI(`Ability: ${a.name}`, a.description)}>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[10px] font-bold text-dagger-gold uppercase tracking-wider flex items-center gap-1">
-                                    {a.isPreset && <i className="fa-solid fa-star text-[8px]" />}
-                                    {a.domain} - Lvl {a.level}
-                                </span>
-                                <span className="text-[10px] text-slate-400 ml-1">{a.type}</span>
-                            </div>
-                            <h4 className="font-bold text-slate-200 mb-1 leading-tight">{a.name}</h4>
-                            <div className="text-xs text-slate-500 mb-2">{a.cost}</div>
-                            <p className="text-xs text-slate-400 line-clamp-2">{a.description}</p>
-                        </div>
-                    </div>
-                ))}
-                {character.abilities.length === 0 && (
-                    <div className="col-span-2 text-center text-slate-500 text-sm py-4 italic">
-                        No abilities selected. Click + to add class abilities.
-                    </div>
-                )}
-             </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: INVENTORY & NOTES (3 cols) */}
-        <div className="md:col-span-3 space-y-4">
-           {/* Experiences */}
-           <div className="glass-panel rounded-xl p-4">
-            <div className="flex justify-between items-center mb-3">
-                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-serif font-bold text-slate-300">Experiences</h2>
-                    <button onClick={() => handleStaticInfo("Experiences")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                 </div>
-                <button onClick={() => setActiveModal('EXPERIENCE')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
-            </div>
-            <div className="space-y-2">
-                {character.experiences.map((e, i) => (
-                    <div key={e.id || i} className="flex justify-between items-center p-2 bg-slate-900/30 rounded border border-slate-700/50 group">
-                        <span className="text-sm text-slate-300">{e.name}</span>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-dagger-hope">+{e.value}</span>
-                            <button onClick={(ev) => { ev.stopPropagation(); requestDeleteExperience(i); }} className="text-slate-600 hover:text-red-400 p-2"><TrashIcon /></button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-           </div>
-
-           {/* Inventory */}
-           <div className="glass-panel rounded-xl p-4 min-h-[400px] flex flex-col">
-            
-            {/* Currency Header */}
-            <div 
-                className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg border border-dagger-gold/30 p-3 mb-4 cursor-pointer hover:border-dagger-gold/60 transition-all group"
-                onClick={() => setActiveModal('GOLD')}
-            >
-                <div className="flex justify-between items-start mb-2">
-                    <span className="text-[10px] text-dagger-gold uppercase tracking-widest font-bold">Wealth</span>
-                    <span className="text-xs text-slate-400 group-hover:text-white transition-colors">Your Hoard &rarr;</span>
-                </div>
-                
-                <div className="grid grid-cols-4 gap-2">
-                    <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-slate-500 mb-1 h-6 flex items-center justify-center w-full"><ChestIcon /></div>
-                        <div className="text-lg font-bold text-dagger-gold leading-none w-full">{chests}</div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-slate-500 mb-1 h-6 flex items-center justify-center w-full"><BagIcon /></div>
-                        <div className="text-lg font-bold text-dagger-gold leading-none w-full">{bags}</div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-slate-500 mb-1 h-6 flex items-center justify-center w-full"><HandIcon /></div>
-                        <div className="text-lg font-bold text-dagger-gold leading-none w-full">{handfuls}</div>
-                    </div>
-                    <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-slate-500 mb-1 h-6 flex items-center justify-center w-full"><CoinIcon /></div>
-                        <div className="text-lg font-bold text-dagger-gold leading-none w-full">{coins}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-between items-center mb-3">
-                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-serif font-bold text-slate-300">Inventory</h2>
-                    <button onClick={() => handleStaticInfo("Inventory")} className="text-slate-500 hover:text-slate-300 scale-75"><InfoIcon /></button>
-                 </div>
-                <div className="flex gap-2 items-center">
-                    <button onClick={() => setActiveModal('INVENTORY')} className="text-slate-400 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"><PlusIcon /></button>
-                </div>
-            </div>
-            <ul className="space-y-2 flex-1">
-                {character.inventory.map((item, i) => (
-                    <li key={i} className="text-sm text-slate-400 flex items-center justify-between group">
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
-                            {item}
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); requestDeleteInventory(i); }} className="text-slate-600 hover:text-red-400 opacity-50 group-hover:opacity-100 transition-opacity"><TrashIcon /></button>
-                    </li>
-                ))}
-            </ul>
-           </div>
-        </div>
-      </main>
-
-      {/* --- FLOATING STATUS INDICATORS --- */}
+      {/* Chat Bot */}
+      <ChatWidget />
       
-      {/* API Stats (Bottom Left) */}
-      <div className="fixed bottom-4 left-4 z-40 bg-slate-900/80 backdrop-blur border border-slate-700 rounded-full px-4 py-2 text-xs text-slate-400 shadow-lg pointer-events-none">
-        <span className="font-mono font-semibold text-dagger-hope">{usageStats.calls}</span> API Calls
-        <span className="mx-2 opacity-50">|</span>
-        <span className="font-mono font-semibold text-dagger-fear">~{usageStats.tokens}</span> Tokens Used
+      {/* Usage Stats (Mini) */}
+      <div className="fixed bottom-1 left-1/2 -translate-x-1/2 z-30 text-[9px] text-slate-600 pointer-events-none opacity-50">
+        API: {usageStats.calls} | Tokens: {usageStats.tokens}
       </div>
 
-      {/* Chat Widget (Bottom Right) */}
-      <ChatWidget />
-
-      {/* --- FLOATING DICE ORB --- */}
-      {rollResult && (
-        <>
-          {showRollDetail && (
-            <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
-              onMouseDown={(e) => { if(e.target === e.currentTarget) backdropRef.current = e.target; }}
-              onMouseUp={(e) => { 
-                if(e.target === e.currentTarget && backdropRef.current === e.currentTarget) setShowRollDetail(false);
-                backdropRef.current = null;
-              }}
-            >
-              <div 
-                className="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden"
-                onClick={(e) => e.stopPropagation()} 
-              >
-                <div className={`absolute inset-0 opacity-10 ${getResultBg(rollResult)}`}></div>
-                
-                <div className="relative z-10 text-center">
-                  <h3 className={`text-2xl font-serif font-bold mb-1 ${getResultColor(rollResult)}`}>
-                    {rollResult.isCrit ? "CRITICAL SUCCESS" : (rollResult.withHope ? "ROLLED WITH HOPE" : "ROLLED WITH FEAR")}
-                  </h3>
-                  <div className="text-6xl font-bold text-white my-6 drop-shadow-lg tracking-tighter">
-                    {rollResult.total}
-                  </div>
-                  
-                  <div className="flex justify-center gap-8 mb-6">
-                    <div className="text-center">
-                        <div className="text-xs uppercase tracking-wider text-dagger-hope mb-1">Hope Die</div>
-                        <div className={`text-3xl font-bold ${rollResult.withHope ? 'text-dagger-hope' : 'text-slate-500'}`}>{rollResult.hopeDie}</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-xs uppercase tracking-wider text-dagger-fear mb-1">Fear Die</div>
-                        <div className={`text-3xl font-bold ${!rollResult.withHope ? 'text-dagger-fear' : 'text-slate-500'}`}>{rollResult.fearDie}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Success Confirmation Interaction */}
-                  {rollResult.withHope && (
-                    <div className="mt-6 pt-4 border-t border-slate-800">
-                        <p className="text-sm text-slate-400 mb-2">Click if you succeeded</p>
-                        <button 
-                            onClick={handleSuccessConfirmation}
-                            className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center mx-auto transition-all duration-300 ${
-                                isSuccessChecked 
-                                    ? 'bg-dagger-gold border-dagger-gold text-slate-900 scale-110' 
-                                    : 'bg-slate-800 border-slate-600 hover:border-dagger-gold text-transparent'
-                            }`}
-                        >
-                            <i className="fa-solid fa-check text-2xl font-bold"></i>
-                        </button>
-                    </div>
-                  )}
-                  
-                  <p className="text-xs text-slate-500 mt-4">Tap outside to close</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!showRollDetail && (
-            <button
-              onClick={() => setShowRollDetail(true)}
-              className={`fixed bottom-6 right-6 w-16 h-16 rounded-full glass-panel shadow-2xl border-2 flex items-center justify-center z-40 transition-transform hover:scale-110 active:scale-95 ${getResultColor(rollResult)}`}
-            >
-              <span className="text-2xl font-bold">{rollResult.total}</span>
-              <span className={`absolute -top-1 -right-1 flex h-4 w-4`}>
-                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${rollResult.withHope ? 'bg-dagger-hope' : 'bg-dagger-fear'}`}></span>
-                 <span className={`relative inline-flex rounded-full h-4 w-4 ${rollResult.withHope ? 'bg-dagger-hope' : 'bg-dagger-fear'}`}></span>
-              </span>
-            </button>
-          )}
-        </>
-      )}
-
-
       {/* --- MODALS --- */}
+      {activeModal === 'PROFILE' && <EditCharacterModal character={character} onSave={handleUpdateProfile} onClose={() => setActiveModal('NONE')} />}
+      {activeModal === 'WEAPON' && <AddWeaponModal onSave={handleAddWeapon} onClose={() => setActiveModal('NONE')} />}
+      {activeModal === 'ABILITY' && <AddAbilityModal character={character} onSave={handleAddAbility} onClose={() => setActiveModal('NONE')} />}
+      {activeModal === 'EXPERIENCE' && <AddExperienceModal onSave={handleAddExperience} onClose={() => setActiveModal('NONE')} />}
+      {activeModal === 'INVENTORY' && <AddInventoryModal onSave={handleAddInventory} onClose={() => setActiveModal('NONE')} />}
       
-      {/* 1. Edit Character Sheet Modal */}
-      {activeModal === 'PROFILE' && (
-        <EditCharacterModal 
-            character={character} 
-            onSave={handleUpdateProfile} 
-            onClose={() => setActiveModal('NONE')} 
-        />
-      )}
-
-      {/* 2. Add Weapon Modal */}
-      {activeModal === 'WEAPON' && (
-        <AddWeaponModal 
-            onSave={handleAddWeapon}
-            onClose={() => setActiveModal('NONE')}
-        />
-      )}
-
-      {/* 3. Add Ability Modal */}
-      {activeModal === 'ABILITY' && (
-        <AddAbilityModal
-            character={character}
-            onSave={handleAddAbility}
-            onClose={() => setActiveModal('NONE')}
-        />
-      )}
-
-      {/* 4. Add Experience Modal */}
-      {activeModal === 'EXPERIENCE' && (
-        <AddExperienceModal 
-            onSave={handleAddExperience}
-            onClose={() => setActiveModal('NONE')}
-        />
-      )}
-
-      {/* 5. Add Inventory Modal */}
-      {activeModal === 'INVENTORY' && (
-        <AddInventoryModal
-            onSave={handleAddInventory}
-            onClose={() => setActiveModal('NONE')}
-        />
-      )}
-
-      {/* 6. Gold Exchange Modal */}
-      {activeModal === 'GOLD' && (
-        <GoldExchangeModal
-            currentGold={character.gold}
-            onUpdate={handleUpdateGold}
-            onClose={() => setActiveModal('NONE')}
-        />
-      )}
-
-      {/* 7. Info/AI Modal */}
+      {/* Info Modal */}
       {activeModal === 'INFO_MODAL' && (
         <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
             onMouseDown={(e) => { if(e.target === e.currentTarget) backdropRef.current = e.target; }}
-            onMouseUp={(e) => { 
-                if(e.target === e.currentTarget && backdropRef.current === e.currentTarget) setActiveModal('NONE');
-                backdropRef.current = null;
-            }}
+            onMouseUp={(e) => { if(e.target === e.currentTarget && backdropRef.current === e.currentTarget) setActiveModal('NONE'); backdropRef.current = null; }}
         >
-          <div className="bg-slate-800 rounded-xl w-full max-w-lg border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+          <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
-              <h3 className="font-bold text-lg text-dagger-gold flex items-center gap-2">
-                <InfoIcon /> {infoModalData.topic}
-              </h3>
+              <h3 className="font-bold text-base text-dagger-gold flex items-center gap-2"><InfoIcon /> {infoModalData.topic}</h3>
               <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
             </div>
-            <div className="p-6 overflow-y-auto dagger-scroll">
-              {infoModalData.loading ? (
-                <div className="space-y-3 animate-pulse">
-                  <div className="h-4 bg-slate-700 rounded w-3/4"></div>
-                  <div className="h-4 bg-slate-700 rounded w-full"></div>
-                  <div className="h-4 bg-slate-700 rounded w-5/6"></div>
-                </div>
-              ) : (
-                <MarkdownText content={infoModalData.content} />
-              )}
+            <div className="p-4 overflow-y-auto dagger-scroll">
+              {infoModalData.loading ? <div className="space-y-2 animate-pulse"><div className="h-2 bg-slate-700 rounded w-3/4"></div><div className="h-2 bg-slate-700 rounded w-full"></div></div> : <MarkdownText content={infoModalData.content} />}
             </div>
           </div>
         </div>
       )}
 
-      {/* 8. Character Select Modal */}
+      {/* Char Select Modal */}
       {activeModal === 'CHAR_SELECT' && (
-        <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onMouseDown={(e) => { if(e.target === e.currentTarget) backdropRef.current = e.target; }}
-            onMouseUp={(e) => { 
-                if(e.target === e.currentTarget && backdropRef.current === e.currentTarget) setActiveModal('NONE');
-                backdropRef.current = null;
-            }}
-        >
-          <div className="bg-slate-800 rounded-xl w-full max-w-md border border-slate-600 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h3 className="font-bold text-white">Saved Characters</h3>
-              <button onClick={() => setActiveModal('NONE')} className="text-slate-400 hover:text-white"><CloseIcon /></button>
-            </div>
-            <div className="p-4 max-h-[60vh] overflow-y-auto dagger-scroll space-y-2">
-              {savedCharacters.length === 0 && <p className="text-slate-500 text-center py-4">No saved characters found.</p>}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setActiveModal('NONE')}>
+          <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-4" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-white mb-2">Load Character</h3>
+            <div className="max-h-60 overflow-y-auto dagger-scroll space-y-2">
+              {savedCharacters.length === 0 && <p className="text-slate-500 text-xs italic text-center">No saves.</p>}
               {savedCharacters.map(char => (
-                <div key={char.id} className="flex items-center justify-between p-3 bg-slate-700/50 rounded hover:bg-slate-700 transition-colors">
+                <div key={char.id} className="flex items-center justify-between p-2 bg-slate-700/50 rounded hover:bg-slate-700">
                   <div onClick={() => { setCharacter(char); setActiveModal('NONE'); }} className="cursor-pointer flex-1">
-                    <div className="font-bold text-white">{char.name}</div>
-                    <div className="text-xs text-slate-400">{char.class} Level {char.level}</div>
+                    <div className="font-bold text-white text-sm">{char.name}</div>
+                    <div className="text-[10px] text-slate-400">{char.class} Lvl {char.level}</div>
                   </div>
-                  <button onClick={() => requestDeleteSavedChar(char.id!)} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded">
-                    <TrashIcon />
-                  </button>
+                  <button onClick={() => requestDeleteSavedChar(char.id!)} className="text-red-400 p-2"><TrashIcon /></button>
                 </div>
               ))}
             </div>
@@ -1930,15 +1510,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 9. Delete Confirmation Modal */}
-      {deleteModal && (
-          <DeleteConfirmModal 
-              title={deleteModal.title}
-              message={deleteModal.message}
-              onConfirm={deleteModal.onConfirm}
-              onClose={() => setDeleteModal(null)}
-          />
-      )}
+      {deleteModal && <DeleteConfirmModal title={deleteModal.title} message={deleteModal.message} onConfirm={deleteModal.onConfirm} onClose={() => setDeleteModal(null)} />}
     </div>
   );
 }
