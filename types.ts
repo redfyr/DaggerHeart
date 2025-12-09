@@ -1,3 +1,4 @@
+
 export enum TraitType {
   Agility = "Agility",
   Strength = "Strength",
@@ -63,6 +64,9 @@ export interface CharacterProfile {
   hope: number;
   maxHope: number;
   gold: number;
+  handfuls: number;
+  bags: number;
+  chests: number;
   weapons: Weapon[];
   abilities: AbilityCard[];
   experiences: Experience[];
