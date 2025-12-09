@@ -486,7 +486,7 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
 // --- MODAL COMPONENTS ---
 
 const DeleteConfirmModal = ({ title, message, onConfirm, onClose }: { title: string, message: string, onConfirm: () => void, onClose: () => void }) => (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-70 flex items-center justify-center p-4">
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-5000 flex items-center justify-center p-4">
     <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-6">
       <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
       <p className="text-slate-300 mb-6">{message}</p>
@@ -1086,7 +1086,25 @@ export default function App() {
   const requestDeleteAbility = (id: string) => { setDeleteModal({ isOpen: true, title: "Delete Ability", message: "Remove this ability?", onConfirm: () => { setCharacter(prev => ({ ...prev, abilities: prev.abilities.filter(a => a.id !== id) })); setDeleteModal(null); } }); };
   const requestDeleteExperience = (index: number) => { setDeleteModal({ isOpen: true, title: "Forget Experience", message: "Remove this tag?", onConfirm: () => { setCharacter(prev => ({ ...prev, experiences: prev.experiences.filter((_, i) => i !== index) })); setDeleteModal(null); } }); };
   const requestDeleteInventory = (index: number) => { setDeleteModal({ isOpen: true, title: "Remove Item", message: "Remove from inventory?", onConfirm: () => { setCharacter(prev => ({ ...prev, inventory: prev.inventory.filter((_, i) => i !== index) })); setDeleteModal(null); } }); };
-  const requestDeleteSavedChar = (id: string) => { setDeleteModal({ isOpen: true, title: "Delete Character", message: "Permanently delete?", onConfirm: async () => { await deleteCharacterFromDB(id); const chars = await getAllCharacters(); setSavedCharacters(chars); setDeleteModal(null); } }); };
+  const requestDeleteSavedChar = (id: string) => { 
+    setDeleteModal({ 
+        isOpen: true, 
+        title: "Delete Character", 
+        message: "Permanently delete?", 
+        onConfirm: async () => { 
+            if (id) {
+                // 1. Delete from Database
+                await deleteCharacterFromDB(id); 
+                
+                // 2. Refresh the list immediately so the UI updates
+                const chars = await getAllCharacters(); 
+                setSavedCharacters(chars); 
+            }
+            // 3. Close the modal
+            setDeleteModal(null); 
+        } 
+    }); 
+};
 
   const getResultColor = (res: RollResult) => {
     if (res.isCrit) return 'text-dagger-gold border-dagger-gold';
