@@ -263,6 +263,26 @@ const DraggableValue: React.FC<DraggableValueProps> = ({
         window.removeEventListener('touchend', handleEnd);
     };
 
+    // --- FIX START: Wheel Handler Added Here ---
+    const handleWheel = (e: React.WheelEvent) => {
+        e.stopPropagation();
+        
+        // Scroll Up (negative delta) adds 1, Scroll Down subtracts 1
+        const direction = e.deltaY < 0 ? 1 : -1;
+        let newVal = valueRef.current + direction;
+
+        if (loop) {
+             newVal = ((newVal % loop) + loop) % loop;
+        } else {
+             newVal = Math.min(max, Math.max(min, newVal));
+        }
+
+        if (newVal !== valueRef.current) {
+            onChange(newVal);
+        }
+    };
+    // --- FIX END ---
+
     const nextVal = loop ? (value + 1) % loop : value + 1;
     const prevVal = loop ? (value - 1 + loop) % loop : value - 1;
 
@@ -286,6 +306,7 @@ const DraggableValue: React.FC<DraggableValueProps> = ({
                     className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative"
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
+                    onWheel={handleWheel} // --- FIX: Listener Added Here ---
                 >
                     <div className="absolute top-0 w-full h-4 sm:h-6 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
                     <div className="absolute bottom-0 w-full h-4 sm:h-6 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
