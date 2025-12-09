@@ -486,7 +486,7 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
 // --- MODAL COMPONENTS ---
 
 const DeleteConfirmModal = ({ title, message, onConfirm, onClose }: { title: string, message: string, onConfirm: () => void, onClose: () => void }) => (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-5000 flex items-center justify-center p-4">
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-110 flex items-center justify-center p-4">
     <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-6">
       <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
       <p className="text-slate-300 mb-6">{message}</p>
@@ -916,6 +916,7 @@ export default function App() {
   const [rollResult, setRollResult] = useState<RollResult | null>(null);
   const [showRollDetail, setShowRollDetail] = useState(false);
   const [isSuccessChecked, setIsSuccessChecked] = useState(false);
+  const isFirstLoad = useRef(true);
   
   // Animation Focus State
   const [animatingResource, setAnimatingResource] = useState<'hope' | 'stress' | null>(null);
@@ -946,7 +947,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
+    // PREVENT AUTO-SAVE ON PAGE LOAD
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      return;
+    }
+
     setSaveStatus('saving');
     const timer = setTimeout(async () => {
       try {
@@ -1509,7 +1516,7 @@ export default function App() {
 
       {/* Char Select Modal */}
       {activeModal === 'CHAR_SELECT' && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setActiveModal('NONE')}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setActiveModal('NONE')}>
           <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-4" onClick={e => e.stopPropagation()}>
             <h3 className="font-bold text-white mb-2">Load Character</h3>
             <div className="max-h-60 overflow-y-auto dagger-scroll space-y-2">
