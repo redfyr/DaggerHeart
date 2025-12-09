@@ -486,7 +486,7 @@ const AccordionSection: React.FC<AccordionSectionProps> = ({
 // --- MODAL COMPONENTS ---
 
 const DeleteConfirmModal = ({ title, message, onConfirm, onClose }: { title: string, message: string, onConfirm: () => void, onClose: () => void }) => (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-91 flex items-center justify-center p-4">
     <div className="bg-slate-800 rounded-xl w-full max-w-sm border border-slate-600 shadow-2xl p-6">
       <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
       <p className="text-slate-300 mb-6">{message}</p>
