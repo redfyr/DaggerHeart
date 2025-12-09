@@ -303,10 +303,11 @@ const DraggableValue: React.FC<DraggableValueProps> = ({
                 </button>
 
                 <div 
-                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative"
+                    // ADDED "touch-none" below to stop mobile scrolling
+                    className="flex-1 h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing relative touch-none"
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
-                    onWheel={handleWheel} // --- FIX: Listener Added Here ---
+                    onWheel={handleWheel}
                 >
                     <div className="absolute top-0 w-full h-4 sm:h-6 bg-gradient-to-b from-slate-900 to-transparent z-10 pointer-events-none"></div>
                     <div className="absolute bottom-0 w-full h-4 sm:h-6 bg-gradient-to-t from-slate-900 to-transparent z-10 pointer-events-none"></div>
